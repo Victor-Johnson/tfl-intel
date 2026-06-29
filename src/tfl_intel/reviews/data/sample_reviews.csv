@@ -1,0 +1,6 @@
+review_id,source,note,text
+syn-001,synthetic,synthetic example,"Synthetic review: My train was cancelled and the notice arrived too late."
+syn-002,synthetic,synthetic example,"Synthetic review: Staff at the station helped me find another route."
+syn-003,synthetic,synthetic example,"Synthetic review: I asked for a refund after repeated delays."
+syn-004,synthetic,synthetic example,"Synthetic review: The platform announcement gave the wrong destination."
+syn-005,synthetic,synthetic example,"Synthetic review: Customer service recorded my complaint quickly."

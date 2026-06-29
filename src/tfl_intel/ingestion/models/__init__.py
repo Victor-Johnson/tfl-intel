@@ -1,0 +1,1 @@
+"""Parsed ingestion models."""

@@ -1,0 +1,17 @@
+[
+  {
+    "_fixture_note": "Synthetic TfL-like test data. Not copied from the live API.",
+    "id": "central",
+    "name": "Central",
+    "modeName": "tube",
+    "lineStatuses": [
+      {
+        "id": 0,
+        "lineId": "central",
+        "statusSeverity": 10,
+        "statusSeverityDescription": "Good Service",
+        "validityPeriods": []
+      }
+    ]
+  }
+]

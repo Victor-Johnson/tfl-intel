@@ -1,0 +1,26 @@
+[
+  {
+    "_fixture_note": "Synthetic TfL-like test data. Not copied from the live API.",
+    "id": "district",
+    "name": "District",
+    "modeName": "tube",
+    "lineStatuses": [
+      {
+        "id": 1,
+        "lineId": "district",
+        "statusSeverity": 9,
+        "statusSeverityDescription": "Minor Delays",
+        "reason": "Synthetic signal failure at Example Road.",
+        "created": "2026-06-29T08:00:00Z",
+        "modified": "2026-06-29T08:05:00Z",
+        "validityPeriods": [
+          {
+            "fromDate": "2026-06-29T08:00:00Z",
+            "toDate": "2026-06-29T09:00:00Z",
+            "isNow": true
+          }
+        ]
+      }
+    ]
+  }
+]

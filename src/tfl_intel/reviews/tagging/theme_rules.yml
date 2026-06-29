@@ -1,0 +1,35 @@
+refund:
+  keywords:
+    - refund
+    - reimbursed
+    - compensation
+warning:
+  keywords:
+    - no warning
+    - notice
+    - announced
+cancellation:
+  keywords:
+    - cancelled
+    - suspended
+    - replacement bus
+staff:
+  keywords:
+    - staff
+    - driver
+    - station assistant
+complaint:
+  keywords:
+    - complaint
+    - complained
+    - customer service
+location:
+  keywords:
+    - station
+    - platform
+    - interchange
+service_mistake:
+  keywords:
+    - wrong train
+    - misinformation
+    - missed stop

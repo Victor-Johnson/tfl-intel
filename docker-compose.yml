@@ -17,5 +17,20 @@ services:
       timeout: 5s
       retries: 5
 
+  duckdb:
+    image: duckdb/duckdb:latest
+    container_name: tfl_intel_duckdb
+    profiles:
+      - tools
+    depends_on:
+      postgres:
+        condition: service_healthy
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - tfl_intel_duckdb_data:/data
+    entrypoint: ["duckdb", "/data/tfl_intel.duckdb"]
+
 volumes:
   tfl_intel_postgres_data:
+  tfl_intel_duckdb_data:

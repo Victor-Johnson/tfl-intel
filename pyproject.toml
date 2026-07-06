@@ -16,6 +16,13 @@ dependencies = [
     "torch>=2.12.1",
 ]
 
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [dependency-groups]
 dev = [
     "mypy>=2.1.0",

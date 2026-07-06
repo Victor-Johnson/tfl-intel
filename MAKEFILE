@@ -1,0 +1,5 @@
+postgres-init:
+	docker exec -i tfl_intel_postgres psql -U tfl_intel -d tfl_intel -v ON_ERROR_STOP=1 < sql/postgres/01_create_schemas.sql
+	docker exec -i tfl_intel_postgres psql -U tfl_intel -d tfl_intel -v ON_ERROR_STOP=1 < sql/postgres/02_create_raw_tables.sql
+	docker exec -i tfl_intel_postgres psql -U tfl_intel -d tfl_intel -v ON_ERROR_STOP=1 < sql/postgres/03_create_indexes.sql
+	docker exec -i tfl_intel_postgres psql -U tfl_intel -d tfl_intel -v ON_ERROR_STOP=1 < sql/postgres/04_add_comments.sql

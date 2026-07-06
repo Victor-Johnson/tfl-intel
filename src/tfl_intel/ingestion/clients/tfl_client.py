@@ -4,6 +4,7 @@ from typing import Any
 
 import httpx
 
+from tfl_intel.common.logging import get_logger
 from tfl_intel.config import Settings
 
 
@@ -21,6 +22,7 @@ class TfLLineClient:
         self._app_key = settings.tfl_app_key
         self._owns_client = client is None
         self._client = client or httpx.Client(timeout=timeout_seconds)
+        self._logger = get_logger(__name__, source="tfl_line_api")
 
     def close(self) -> None:
         """Close the underlying HTTP client when this instance owns it."""
@@ -69,6 +71,12 @@ class TfLLineClient:
         url = f"{self._base_url}{path}"
         try:
             response = self._client.get(url, params=request_params)
+            self._logger.info(
+                "tfl_line_api_response",
+                endpoint=path,
+                status_code=response.status_code,
+                using_app_key=bool(self._app_key),
+            )
             response.raise_for_status()
         except httpx.TimeoutException as exc:
             msg = f"TfL Line API request timed out for {path}"

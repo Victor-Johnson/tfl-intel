@@ -34,3 +34,11 @@ def test_different_ingestion_run_id_gives_different_observation_id() -> None:
     assert make_observation_id("central", fingerprint, "run-1") != make_observation_id(
         "central", fingerprint, "run-2"
     )
+
+
+def test_same_input_gives_same_observation_id() -> None:
+    fingerprint = make_status_fingerprint("central", "Good Service", None, None, None)
+
+    assert make_observation_id("central", fingerprint, "run-1") == make_observation_id(
+        "central", fingerprint, "run-1"
+    )

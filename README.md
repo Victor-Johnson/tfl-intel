@@ -9,7 +9,7 @@ across TfL operational status data and complaint or review themes.
 V1 proves a clean vertical slice:
 
 ```text
-TfL Line/Status API -> Python ingestion -> Postgres raw schema later
+TfL Line API -> Python ingestion -> Postgres raw schema
   -> dbt models later -> Metabase dashboard later
 ```
 
@@ -25,10 +25,10 @@ examples in this repo are synthetic and exist only to shape future theme logic.
 
 ## Architecture Summary
 
-The V1 ingestion path fetches the TfL Line/Status API with a small `httpx`
-client, parses one observation per line status item, and leaves Postgres writes
-behind a documented loader skeleton. Review theme work starts with a small YAML
-rules file and synthetic sample rows.
+The V1 ingestion path fetches the TfL Line API with a small `httpx` client,
+parses one observation per line status item, and writes raw observations and
+metadata to Postgres. Review theme work starts with a small YAML rules file and
+synthetic sample rows.
 
 ## Local Setup
 
@@ -51,6 +51,18 @@ uv run mypy src
 uv run python -m tfl_intel.ingestion.jobs.ingest_line_status
 ```
 
+## Local API ingestion smoke test
+
+```bash
+docker compose up -d postgres
+
+uv run python -m tfl_intel.ingestion.jobs.ingest_line_status
+
+docker exec -it tfl_intel_postgres psql -U tfl_intel -d tfl_intel -c "SELECT COUNT(*) FROM raw.pipeline_runs;"
+
+docker exec -it tfl_intel_postgres psql -U tfl_intel -d tfl_intel -c "SELECT COUNT(*) FROM raw.tfl_line_status_observations;"
+```
+
 ## Current Status
 
 - [x] Python `src/` package scaffold
@@ -60,6 +72,6 @@ uv run python -m tfl_intel.ingestion.jobs.ingest_line_status
 - [x] Safe `.env.example`
 - [x] Review theme scaffold with synthetic data
 - [x] Architecture and ADR docs
-- [ ] Postgres raw schema
+- [x] Postgres raw schema
 - [ ] dbt models
 - [ ] Metabase dashboard

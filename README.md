@@ -1,5 +1,7 @@
 # TfL Intel
 
+![CI](https://github.com/Victor-Johnson/tfl-intel/actions/workflows/ci.yml/badge.svg)
+
 **TfL Transport Intelligence Platform** is a professional data engineering and
 analytics engineering portfolio project for understanding passenger experience
 across TfL operational status data and future complaint or review themes.

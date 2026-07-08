@@ -37,6 +37,9 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "integration: requires local Postgres (docker compose up -d postgres)",
+]
 
 [tool.ruff]
 line-length = 88

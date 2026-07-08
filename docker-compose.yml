@@ -36,6 +36,8 @@ services:
       PGDATABASE: tfl_intel
       PGUSER: tfl_intel
       PYTHONPATH: /workspace/src
+      # Keep container-side uv away from the host .venv mounted at /workspace
+      UV_PROJECT_ENVIRONMENT: /opt/container-venv
     secrets:
       - postgres_password
     volumes:
@@ -51,6 +53,8 @@ services:
       DUCKDB_PATH: /data/tfl_intel.duckdb
       LOG_LEVEL: INFO
       PYTHONPATH: /workspace/src
+      # Keep container-side uv away from the host .venv mounted at /workspace
+      UV_PROJECT_ENVIRONMENT: /opt/container-venv
     ports:
       - "8000:8000"
     volumes:
@@ -69,8 +73,6 @@ services:
         "duckdb",
         "--with",
         "pydantic-settings",
-        "--with",
-        "pytz",
         "--with",
         "structlog",
         "uvicorn",

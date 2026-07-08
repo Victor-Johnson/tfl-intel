@@ -64,23 +64,21 @@ can be explored without hardcoding secrets.
 
 ```bash
 uv sync
-uv run pytest
-uv run ruff check .
-uv run ruff format .
-uv run mypy src
-uv run python -m tfl_intel.ingestion.jobs.ingest_line_status
+make check                     # lint + typecheck + unit tests (the CI gate)
+uv run pytest -m integration   # loader tests against local Postgres
+make ingest-line-status        # one ingestion run
 ```
+
+See [docs/runbook.md](docs/runbook.md) for the full end-to-end pipeline runbook.
 
 ## Local Serving Smoke Test
 
 ```bash
-docker compose up -d postgres
-
-uv run python -m tfl_intel.ingestion.jobs.ingest_line_status
-
-docker compose run --rm --entrypoint /workspace/scripts/refresh_duckdb_from_postgres.sh duckdb
-
-docker compose up -d api
+make postgres-up
+make postgres-init          # first time only: apply sql/postgres/*.sql
+make ingest-line-status
+make duckdb-refresh
+make api-docker
 
 curl http://localhost:8000/health
 curl http://localhost:8000/ready
@@ -88,6 +86,8 @@ curl http://localhost:8000/api/v1/lines/current-status
 curl http://localhost:8000/api/v1/lines/status-summary
 curl http://localhost:8000/api/v1/pipeline/freshness
 ```
+
+Interactive API docs are served at `http://localhost:8000/docs`.
 
 ## API Endpoints
 
@@ -113,5 +113,9 @@ GET /api/v1/pipeline/freshness
 - [x] Postgres raw schema
 - [x] DuckDB analytics snapshot
 - [x] FastAPI read-only serving layer
+- [x] Retry with exponential backoff on the TfL client
+- [x] Loader idempotency proven by integration tests
+- [x] GitHub Actions CI (ruff, mypy, pytest)
+- [ ] Scheduled ingestion + reliability marts (uptime, MTTR)
 - [ ] dbt models
 - [ ] Metabase dashboard

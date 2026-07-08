@@ -3,9 +3,26 @@
 from typing import Any
 
 import httpx
+from tenacity import (
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from tfl_intel.common.logging import get_logger
 from tfl_intel.config import Settings
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """Retry timeouts and server errors; client errors are permanent."""
+
+    if isinstance(exc, httpx.TimeoutException):
+        return True
+    return (
+        isinstance(exc, httpx.HTTPStatusError)
+        and exc.response.status_code >= 500
+    )
 
 
 class TfLLineClient:
@@ -61,6 +78,19 @@ class TfLLineClient:
             params["severityLevel"] = severity_level
         return self._get_json_list(f"/Mode/{mode}/Status", params=params)
 
+    @retry(
+        retry=retry_if_exception(_is_retryable),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=0.5, max=8),
+        reraise=True,
+    )
+    def _send(self, url: str, params: dict[str, str]) -> httpx.Response:
+        """Issue one GET, retrying timeouts and 5xx with exponential backoff."""
+
+        response = self._client.get(url, params=params)
+        response.raise_for_status()
+        return response
+
     def _get_json_list(
         self, path: str, *, params: dict[str, str] | None = None
     ) -> list[dict[str, Any]]:
@@ -70,14 +100,7 @@ class TfLLineClient:
 
         url = f"{self._base_url}{path}"
         try:
-            response = self._client.get(url, params=request_params)
-            self._logger.info(
-                "tfl_line_api_response",
-                endpoint=path,
-                status_code=response.status_code,
-                using_app_key=bool(self._app_key),
-            )
-            response.raise_for_status()
+            response = self._send(url, request_params)
         except httpx.TimeoutException as exc:
             msg = f"TfL Line API request timed out for {path}"
             raise RuntimeError(msg) from exc
@@ -87,6 +110,13 @@ class TfLLineClient:
                 f"with HTTP {exc.response.status_code}"
             )
             raise RuntimeError(msg) from exc
+
+        self._logger.info(
+            "tfl_line_api_response",
+            endpoint=path,
+            status_code=response.status_code,
+            using_app_key=bool(self._app_key),
+        )
 
         payload = response.json()
         if not isinstance(payload, list):

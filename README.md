@@ -1,8 +1,8 @@
 # TfL Intel
 
-**TfL Passenger Pain Intelligence Platform** is a professional data engineering
-and analytics engineering portfolio project for understanding passenger pain
-across TfL operational status data and complaint or review themes.
+**TfL Transport Intelligence Platform** is a professional data engineering and
+analytics engineering portfolio project for understanding passenger experience
+across TfL operational status data and future complaint or review themes.
 
 ## V1 Scope
 
@@ -10,7 +10,7 @@ V1 proves a clean vertical slice:
 
 ```text
 TfL Line API -> Python ingestion -> Postgres raw schema
-  -> dbt models later -> Metabase dashboard later
+  -> DuckDB analytics snapshot -> FastAPI serving layer
 ```
 
 The first implementation focuses on package structure, source ingestion
@@ -23,18 +23,36 @@ Redpanda, MinIO, Dagster, Grafana, LSTM forecasting, LLM briefing, production
 orchestration, and external review scraping are intentionally delayed. Review
 examples in this repo are synthetic and exist only to shape future theme logic.
 
-## Architecture Summary
+## Architecture
+
+```text
+TfL API -> Postgres raw layer -> DuckDB analytics layer -> FastAPI serving layer
+```
 
 The V1 ingestion path fetches the TfL Line API with a small `httpx` client,
 parses one observation per line status item, and writes raw observations and
-metadata to Postgres. Review theme work starts with a small YAML rules file and
-synthetic sample rows.
+metadata to Postgres.
+
+Postgres is the raw source of truth because it stores ingestion runs, raw JSON
+payloads, and append-style observations with durable operational semantics.
+DuckDB is used as an analytical read model because it can snapshot the raw
+tables into local columnar analytics tables that are simple to query and easy to
+ship with a portfolio demo. FastAPI reads from DuckDB so dashboard consumers get
+clean read-only JSON without coupling the API to TfL ingestion or exposing raw
+Postgres tables directly.
+
+Docker secrets provide the Postgres password to containers through
+`/run/secrets/postgres_password`. The secret file lives under ignored
+`secrets/`; the committed `secrets.example/` directory shows the expected local
+shape without committing credentials.
 
 ## Local Setup
 
 ```bash
 uv sync
 cp .env.example .env
+mkdir -p secrets
+cp secrets.example/postgres_password.txt.example secrets/postgres_password.txt
 ```
 
 TfL credentials are optional for local tests. The public Line/Status endpoint
@@ -51,16 +69,34 @@ uv run mypy src
 uv run python -m tfl_intel.ingestion.jobs.ingest_line_status
 ```
 
-## Local API ingestion smoke test
+## Local Serving Smoke Test
 
 ```bash
 docker compose up -d postgres
 
 uv run python -m tfl_intel.ingestion.jobs.ingest_line_status
 
-docker exec -it tfl_intel_postgres psql -U tfl_intel -d tfl_intel -c "SELECT COUNT(*) FROM raw.pipeline_runs;"
+docker compose run --rm --entrypoint /workspace/scripts/refresh_duckdb_from_postgres.sh duckdb
 
-docker exec -it tfl_intel_postgres psql -U tfl_intel -d tfl_intel -c "SELECT COUNT(*) FROM raw.tfl_line_status_observations;"
+docker compose up -d api
+
+curl http://localhost:8000/health
+curl http://localhost:8000/ready
+curl http://localhost:8000/api/v1/lines/current-status
+curl http://localhost:8000/api/v1/lines/status-summary
+curl http://localhost:8000/api/v1/pipeline/freshness
+```
+
+## API Endpoints
+
+```text
+GET /health
+GET /ready
+GET /api/v1/lines/current-status
+GET /api/v1/lines/status-summary
+GET /api/v1/lines/{line_id}/history?limit=50
+GET /api/v1/pipeline/latest-run
+GET /api/v1/pipeline/freshness
 ```
 
 ## Current Status
@@ -73,5 +109,7 @@ docker exec -it tfl_intel_postgres psql -U tfl_intel -d tfl_intel -c "SELECT COU
 - [x] Review theme scaffold with synthetic data
 - [x] Architecture and ADR docs
 - [x] Postgres raw schema
+- [x] DuckDB analytics snapshot
+- [x] FastAPI read-only serving layer
 - [ ] dbt models
 - [ ] Metabase dashboard

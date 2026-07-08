@@ -5,15 +5,19 @@ description = "TfL Passenger Pain Intelligence Platform"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "duckdb>=1.5.4",
+    "fastapi>=0.139.0",
     "httpx>=0.28.1",
     "psycopg[binary]>=3.3.4",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.2",
     "python-dotenv>=1.2.2",
+    "pytz>=2025.2",
     "sqlalchemy>=2.0.51",
     "structlog>=26.1.0",
     "tenacity>=9.1.4",
     "torch>=2.12.1",
+    "uvicorn>=0.50.2",
 ]
 
 [build-system]

@@ -6,7 +6,9 @@ services:
     environment:
       POSTGRES_DB: tfl_intel
       POSTGRES_USER: tfl_intel
-      POSTGRES_PASSWORD: tfl_intel
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
     ports:
       - "5432:5432"
     volumes:
@@ -18,7 +20,7 @@ services:
       retries: 5
 
   duckdb:
-    image: duckdb/duckdb:latest
+    image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
     container_name: tfl_intel_duckdb
     profiles:
       - tools
@@ -26,10 +28,62 @@ services:
       postgres:
         condition: service_healthy
     working_dir: /workspace
+    env_file:
+      - .env
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: tfl_intel
+      PGUSER: tfl_intel
+      PYTHONPATH: /workspace/src
+    secrets:
+      - postgres_password
     volumes:
       - .:/workspace
       - tfl_intel_duckdb_data:/data
-    entrypoint: ["duckdb", "/data/tfl_intel.duckdb"]
+    entrypoint: ["uv", "run", "--no-project", "python", "--version"]
+
+  api:
+    image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+    container_name: tfl_intel_api
+    working_dir: /workspace
+    environment:
+      DUCKDB_PATH: /data/tfl_intel.duckdb
+      LOG_LEVEL: INFO
+      PYTHONPATH: /workspace/src
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/workspace
+      - tfl_intel_duckdb_data:/data
+    command:
+      [
+        "uv",
+        "run",
+        "--no-project",
+        "--with",
+        "fastapi",
+        "--with",
+        "uvicorn",
+        "--with",
+        "duckdb",
+        "--with",
+        "pydantic-settings",
+        "--with",
+        "pytz",
+        "--with",
+        "structlog",
+        "uvicorn",
+        "tfl_intel.serving.app:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+      ]
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
 
 volumes:
   tfl_intel_postgres_data:

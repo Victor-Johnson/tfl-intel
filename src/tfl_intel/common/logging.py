@@ -13,6 +13,7 @@ def configure_logging(log_level: str = "INFO") -> None:
         format="%(message)s",
         level=getattr(logging, log_level.upper(), logging.INFO),
     )
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,

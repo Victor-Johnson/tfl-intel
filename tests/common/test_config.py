@@ -5,12 +5,10 @@ def test_config_loads_defaults() -> None:
     settings = Settings(_env_file=None)
 
     assert settings.tfl_api_base_url == "https://api.tfl.gov.uk/Line"
-    assert (
-        settings.database_url
-        == "postgresql://tfl_intel:tfl_intel@localhost:5432/tfl_intel"
-    )
+    assert settings.database_url is None
     assert settings.postgres_host == "localhost"
     assert settings.postgres_port == 5432
+    assert settings.postgres_password_file == "secrets/postgres_password.txt"
     assert settings.log_level == "INFO"
 
 

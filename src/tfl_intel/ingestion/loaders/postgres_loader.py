@@ -15,7 +15,7 @@ def get_connection() -> Connection:
     """Open a psycopg connection using configured DATABASE_URL."""
 
     settings = get_settings()
-    return psycopg.connect(settings.database_url)
+    return psycopg.connect(settings.postgres_conninfo())
 
 
 def start_pipeline_run(

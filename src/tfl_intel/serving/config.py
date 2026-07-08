@@ -1,5 +1,7 @@
 """Configuration for the FastAPI serving layer."""
 
+from functools import lru_cache
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -19,6 +21,18 @@ class ServingSettings(BaseSettings):
 
 
 def load_settings() -> ServingSettings:
-    """Load serving settings from environment and optional .env file."""
+    """Load serving settings fresh from environment and optional .env file."""
 
     return ServingSettings()
+
+
+@lru_cache
+def get_settings() -> ServingSettings:
+    """Return process-wide cached serving settings.
+
+    Request handlers should use this instead of load_settings so each
+    request does not re-read .env from disk. Tests that change DUCKDB_PATH
+    must call get_settings.cache_clear().
+    """
+
+    return load_settings()

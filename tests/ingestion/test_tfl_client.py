@@ -65,9 +65,7 @@ def test_client_does_not_retry_client_errors() -> None:
     settings = Settings(tfl_api_base_url="https://api.example.test/Line")
 
     with respx.mock(base_url="https://api.example.test") as router:
-        route = router.get("/Line/Mode/tube/Status").mock(
-            return_value=Response(404)
-        )
+        route = router.get("/Line/Mode/tube/Status").mock(return_value=Response(404))
 
         with pytest.raises(RuntimeError, match="HTTP 404"):
             TfLLineClient(settings).get_line_status_by_mode("tube")

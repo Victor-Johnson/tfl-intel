@@ -8,7 +8,7 @@ from typing import Any
 
 import duckdb
 
-from tfl_intel.serving.config import load_settings
+from tfl_intel.serving.config import get_settings
 
 REQUIRED_ANALYTICS_TABLES = (
     "analytics.current_line_status",
@@ -20,14 +20,16 @@ REQUIRED_ANALYTICS_TABLES = (
 def duckdb_path_exists(path: str | None = None) -> bool:
     """Return whether the configured DuckDB file exists."""
 
-    db_path = Path(path or load_settings().duckdb_path)
+    db_path = Path(path or get_settings().duckdb_path)
     return db_path.exists()
 
 
 def fetch_all(query: str, params: Sequence[Any] = ()) -> list[dict[str, Any]]:
     """Run a read-only DuckDB query and return rows as dictionaries."""
 
-    with duckdb.connect(load_settings().duckdb_path, read_only=True) as conn:
+    # A fresh read-only connection per query keeps the API decoupled from
+    # snapshot refreshes that replace the DuckDB file underneath it.
+    with duckdb.connect(get_settings().duckdb_path, read_only=True) as conn:
         result = conn.execute(query, params)
         columns = [column[0] for column in result.description]
         return [dict(zip(columns, row, strict=True)) for row in result.fetchall()]

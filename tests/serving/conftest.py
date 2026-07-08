@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tfl_intel.serving.app import app
+from tfl_intel.serving.config import get_settings
 
 
 @pytest.fixture
@@ -121,7 +122,9 @@ def test_duckdb_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterato
         )
 
     monkeypatch.setenv("DUCKDB_PATH", str(db_path))
+    get_settings.cache_clear()
     yield db_path
+    get_settings.cache_clear()
 
 
 @pytest.fixture

@@ -19,10 +19,7 @@ def _is_retryable(exc: BaseException) -> bool:
 
     if isinstance(exc, httpx.TimeoutException):
         return True
-    return (
-        isinstance(exc, httpx.HTTPStatusError)
-        and exc.response.status_code >= 500
-    )
+    return isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code >= 500
 
 
 class TfLLineClient:

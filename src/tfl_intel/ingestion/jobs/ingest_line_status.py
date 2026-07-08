@@ -58,6 +58,7 @@ def run() -> int:
                 observations=observations,
                 ingestion_run_id=ingestion_run_id,
                 observed_at=observed_at,
+                source_endpoint=source_endpoint,
             )
 
             mark_pipeline_success(

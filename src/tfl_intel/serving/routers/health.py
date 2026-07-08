@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from tfl_intel.serving.config import load_settings
+from tfl_intel.serving.config import get_settings
 from tfl_intel.serving.db import check_required_tables, duckdb_path_exists
 from tfl_intel.serving.schemas import HealthResponse, ReadyResponse
 
@@ -20,7 +20,7 @@ def health() -> HealthResponse:
 def ready() -> ReadyResponse:
     """Return readiness for DuckDB-backed analytical serving."""
 
-    settings = load_settings()
+    settings = get_settings()
     db_exists = duckdb_path_exists(settings.duckdb_path)
     tables_exist, missing_tables = check_required_tables()
     is_ready = db_exists and tables_exist

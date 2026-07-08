@@ -1,20 +1,24 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
-*.pyc
 build/
 dist/
 wheels/
 *.egg-info
 
 # Virtual environments
-.venv
 .venv/
-.env
 
-# Local environment and caches
+# Local environment and secrets
 .env
+*.env
+!.env.example
+secrets/
+
+# Local caches and logs
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
 .DS_Store
+*.log
+*.duckdb

@@ -74,6 +74,8 @@ services:
         "--with",
         "pydantic-settings",
         "--with",
+        "pytz",
+        "--with",
         "structlog",
         "uvicorn",
         "tfl_intel.serving.app:app",

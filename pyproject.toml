@@ -12,6 +12,9 @@ dependencies = [
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.2",
     "python-dotenv>=1.2.2",
+    # Not imported directly: duckdb lazily imports pytz to convert
+    # TIMESTAMPTZ query results to Python datetimes.
+    "pytz>=2025.2",
     "structlog>=26.1.0",
     "tenacity>=9.1.4",
     "uvicorn>=0.50.2",

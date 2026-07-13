@@ -22,3 +22,9 @@ secrets/
 .DS_Store
 *.log
 *.duckdb
+
+docs/
+
+#Airflow 
+airflow/logs/
+airflow/**/*.pyc

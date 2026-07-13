@@ -1,17 +1,20 @@
 #!/usr/bin/env sh
 set -eu
 
-if [! -f/run/secrets/postgres_password]; then 
-    echo "Missing Docker secrets : /run/secrets/postgres_password"
-    exit 1 
+POSTGRES_PASSWORD_FILE="${POSTGRES_PASSWORD_FILE:-/run/secrets/postgres_password}"
+
+if [ ! -r "$POSTGRES_PASSWORD_FILE" ]; then
+  echo "Postgres password secret is not readable at $POSTGRES_PASSWORD_FILE" >&2
+  exit 1
 fi
 
-POSTGRES_PASSWORD_VALUE = "$(cat /run/secrets/postgres_password)"
-
+POSTGRES_PASSWORD_VALUE="$(cat "$POSTGRES_PASSWORD_FILE")"
 export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD_VALUE}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
 
 cd /workspace
 
-uv run python -m tfl_intel.ingestion.jobs.ingest_line_status
+if [ -n "${TFL_PYTHON:-}" ]; then
+  exec "$TFL_PYTHON" -m tfl_intel.ingestion.jobs.ingest_line_status
+fi
 
-## Purpose : Runs Airflow task -> wrapper script -> reads docker secrets -> builds DATABASE_URL -> runs ingestion
+exec uv run python -m tfl_intel.ingestion.jobs.ingest_line_status

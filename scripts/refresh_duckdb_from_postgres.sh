@@ -12,6 +12,13 @@ fi
 export PGPASSWORD
 PGPASSWORD="$(cat "$POSTGRES_PASSWORD_FILE")"
 
-uv run --no-project --with duckdb python /workspace/scripts/run_duckdb_sql.py \
+if [ -n "${TFL_PYTHON:-}" ]; then
+  exec "$TFL_PYTHON" /workspace/scripts/run_duckdb_sql.py \
+    "$DUCKDB_PATH" \
+    /workspace/sql/duckdb/refresh_from_postgres.sql
+fi
+
+exec uv run --no-project --with duckdb python \
+  /workspace/scripts/run_duckdb_sql.py \
   "$DUCKDB_PATH" \
   /workspace/sql/duckdb/refresh_from_postgres.sql

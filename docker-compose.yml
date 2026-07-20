@@ -1,42 +1,49 @@
+name: tfl-intel
+
+x-service-defaults: &service-defaults
+  init: true
+  restart: unless-stopped
+  networks:
+    - backend
+
+x-postgres-healthcheck: &postgres-healthcheck
+  test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 10s
+
 services:
   postgres:
-    image: postgres:16
-    container_name: tfl_intel_postgres
-    restart: unless-stopped
+    <<: *service-defaults
+    image: postgres:16-bookworm
     environment:
-      POSTGRES_DB: tfl_intel
-      POSTGRES_USER: tfl_intel
+      POSTGRES_DB: ${POSTGRES_DB:-tfl_intel}
+      POSTGRES_USER: ${POSTGRES_USER:-tfl_intel}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     secrets:
       - postgres_password
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - tfl_intel_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tfl_intel -d tfl_intel"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    healthcheck: *postgres-healthcheck
 
   duckdb:
+    <<: *service-defaults
     image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
-    container_name: tfl_intel_duckdb
-    profiles:
-      - tools
+    profiles: [tools]
     depends_on:
       postgres:
         condition: service_healthy
     working_dir: /workspace
-    env_file:
-      - .env
     environment:
-      PGHOST: postgres
-      PGPORT: 5432
-      PGDATABASE: tfl_intel
-      PGUSER: tfl_intel
-      PYTHONPATH: /workspace/src
-      # Keep container-side uv away from the host .venv mounted at /workspace
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-tfl_intel}
+      POSTGRES_USER: ${POSTGRES_USER:-tfl_intel}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      DUCKDB_PATH: /data/tfl_intel.duckdb
       UV_PROJECT_ENVIRONMENT: /opt/container-venv
     secrets:
       - postgres_password
@@ -44,46 +51,37 @@ services:
       - .:/workspace
       - tfl_intel_duckdb_data:/data
     entrypoint: ["uv", "run", "--no-project", "python", "--version"]
+    restart: "no"
 
   api:
-    image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
-    container_name: tfl_intel_api
-    working_dir: /workspace
+    <<: *service-defaults
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    image: tfl-intel-api:local
     environment:
       DUCKDB_PATH: /data/tfl_intel.duckdb
-      LOG_LEVEL: INFO
-      PYTHONPATH: /workspace/src
-      # Keep container-side uv away from the host .venv mounted at /workspace
-      UV_PROJECT_ENVIRONMENT: /opt/container-venv
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     volumes:
-      - .:/workspace
-      - tfl_intel_duckdb_data:/data
-    command:
-      [
-        "uv",
-        "run",
-        "--no-project",
-        "--with",
-        "fastapi",
-        "--with",
-        "uvicorn",
-        "--with",
-        "duckdb",
-        "--with",
-        "pydantic-settings",
-        "--with",
-        "pytz",
-        "--with",
-        "structlog",
-        "uvicorn",
-        "tfl_intel.serving.app:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8000",
-      ]
+      - tfl_intel_duckdb_data:/data:ro
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://localhost:8000/health', timeout=2)
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  backend:
+    driver: bridge
 
 secrets:
   postgres_password:

@@ -15,7 +15,7 @@ def get_connection() -> Connection:
     """Open a psycopg connection using configured DATABASE_URL."""
 
     settings = get_settings()
-    return psycopg.connect(settings.database_url)
+    return psycopg.connect(settings.postgres_conninfo())
 
 
 def start_pipeline_run(
@@ -102,6 +102,7 @@ def insert_line_status_observations(
     observations: list[Any],
     ingestion_run_id: str,
     observed_at: datetime,
+    source_endpoint: str = "/Mode/tube/Status",
 ) -> int:
     inserted = 0
 
@@ -172,7 +173,7 @@ def insert_line_status_observations(
                     row.get("validity_end"),
                     row.get("validity_is_now"),
                     observed_at,
-                    "/Mode/tube/Status",
+                    source_endpoint,
                     Jsonb(row.get("raw_payload", row)),
                 ),
             )

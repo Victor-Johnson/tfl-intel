@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">TfL reliability dashboard preview</title>
+  <desc id="desc">A representative multi-mode reliability dashboard using synthetic fixture values.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#090e15"/><stop offset="1" stop-color="#123244"/></linearGradient>
+    <style>.h{font:700 48px system-ui;fill:#f4f7fb}.ey{font:700 13px ui-monospace;fill:#55d6c8;letter-spacing:2px}.m{font:400 15px system-ui;fill:#96a6bb}.p{fill:#121b27;stroke:#29384c;stroke-width:2}.k{font:400 13px system-ui;fill:#96a6bb}.v{font:700 25px system-ui;fill:#f4f7fb}.sh{font:700 18px system-ui;fill:#f4f7fb}.grid{stroke:#29384c;stroke-width:1}</style>
+  </defs>
+  <rect width="1440" height="900" rx="28" fill="url(#bg)"/>
+  <text class="ey" x="70" y="70">TFL INTEL / OPERATIONS</text><text class="h" x="70" y="125">Reliability pulse</text>
+  <text class="m" x="70" y="158">Coverage-aware performance across five TfL rail and tram modes.</text>
+  <circle cx="1130" cy="112" r="7" fill="#67dc93"/><text class="m" x="1150" y="118">Sample snapshot · fixture data</text>
+  <g><rect class="p" x="70" y="195" width="300" height="105" rx="16"/><text class="k" x="92" y="228">Least reliable line</text><text class="v" x="92" y="272">Central</text>
+  <rect class="p" x="395" y="195" width="300" height="105" rx="16"/><text class="k" x="417" y="228">Best observed uptime</text><text class="v" x="417" y="272">99.1%</text>
+  <rect class="p" x="720" y="195" width="300" height="105" rx="16"/><text class="k" x="742" y="228">Open disruptions</text><text class="v" x="742" y="272">3</text>
+  <rect class="p" x="1045" y="195" width="325" height="105" rx="16"/><text class="k" x="1067" y="228">Seven-day coverage</text><text class="v" x="1067" y="272">94.2%</text></g>
+  <rect class="p" x="70" y="325" width="625" height="205" rx="16"/><text class="sh" x="96" y="365">Passenger-visible status mix</text>
+  <rect x="96" y="395" width="550" height="30" rx="7" fill="#263547"/><path d="M96 395h457v30H96z" fill="#67dc93"/><path d="M553 395h65v30h-65z" fill="#ffc857"/><path d="M618 395h28v30h-28z" fill="#ff7180"/>
+  <circle cx="103" cy="463" r="5" fill="#67dc93"/><text class="m" x="118" y="468">Good Service 83.1%</text><circle cx="303" cy="463" r="5" fill="#ffc857"/><text class="m" x="318" y="468">Minor Delays 11.8%</text><circle cx="528" cy="463" r="5" fill="#ff7180"/><text class="m" x="543" y="468">Other 5.1%</text>
+  <rect class="p" x="720" y="325" width="650" height="205" rx="16"/><text class="sh" x="746" y="365">Coverage vs observed uptime</text>
+  <g class="grid"><path d="M770 395H1332"/><path d="M770 445H1332"/><path d="M770 495H1332"/><path d="M850 385V500"/><path d="M1010 385V500"/><path d="M1170 385V500"/><path d="M1330 385V500"/></g>
+  <g fill="#55d6c8" stroke="#090e15" stroke-width="3"><circle cx="1190" cy="430" r="8"/><circle cx="1280" cy="404" r="8"/><circle cx="1130" cy="465" r="8"/><circle cx="1240" cy="444" r="8"/><circle cx="1070" cy="418" r="8"/><circle cx="1305" cy="390" r="8"/><circle cx="1160" cy="400" r="8"/></g>
+  <rect class="p" x="70" y="555" width="1300" height="265" rx="16"/><text class="sh" x="96" y="595">Disruption rate by weekday and hour</text><text class="m" x="1050" y="595">Europe/London · darker means more disruption</text>
+  <g transform="translate(150 625)"><g fill="#96a6bb" font-family="system-ui" font-size="12"><text x="-55" y="22">Mon</text><text x="-55" y="50">Tue</text><text x="-55" y="78">Wed</text><text x="-55" y="106">Thu</text><text x="-55" y="134">Fri</text><text x="-55" y="162">Sat</text><text x="-55" y="190">Sun</text></g>
+  <g fill="#ff7180"><path opacity=".1" d="M0 0h1170v22H0zM0 28h1170v22H0zM0 56h1170v22H0zM0 84h1170v22H0zM0 112h1170v22H0zM0 140h1170v22H0zM0 168h1170v22H0z"/><rect x="340" width="90" height="22" opacity=".75"/><rect x="440" width="45" height="22" opacity=".38"/><rect x="835" width="70" height="22" opacity=".55"/><rect x="290" y="28" width="55" height="22" opacity=".4"/><rect x="790" y="56" width="110" height="22" opacity=".7"/><rect x="390" y="84" width="45" height="22" opacity=".3"/><rect x="850" y="112" width="125" height="22" opacity=".85"/><rect x="505" y="140" width="70" height="22" opacity=".32"/><rect x="620" y="168" width="95" height="22" opacity=".48"/></g></g>
+  <text class="m" x="70" y="866">Synthetic preview · Data provided by Transport for London · Unofficial portfolio project</text>
+</svg>

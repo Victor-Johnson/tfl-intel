@@ -1,0 +1,97 @@
+services:
+  metabase-db:
+    image: postgres:16-bookworm
+    init: true
+    restart: unless-stopped
+    networks:
+      - backend
+    environment:
+      POSTGRES_DB: metabase
+      POSTGRES_USER: metabase
+      POSTGRES_PASSWORD_FILE: /run/secrets/metabase_app_db_password
+    secrets:
+      - metabase_app_db_password
+    volumes:
+      - metabase_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metabase -d metabase"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  metabase:
+    image: metabase/metabase:v0.63.17.x@sha256:5f2ace3426bc4fa9259d6ec68dacae0023c302e8e812ee7f54fce9f6942b6874
+    init: true
+    restart: unless-stopped
+    networks:
+      - backend
+    depends_on:
+      metabase-db:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: "5432"
+      MB_DB_USER: metabase
+      MB_DB_PASS_FILE: /run/secrets/metabase_app_db_password
+      MB_DB_HOST: metabase-db
+      MB_SITE_NAME: TfL Intel BI
+      MB_SITE_URL: ${METABASE_SITE_URL:-https://tfl-bi.victorjohnson.dev}
+      MB_ANON_TRACKING_ENABLED: "false"
+      MB_APPLICATION_DB_MAX_CONNECTION_POOL_SIZE: "5"
+      MB_JDBC_DATA_WAREHOUSE_MAX_CONNECTION_POOL_SIZE: "5"
+      JAVA_TIMEZONE: Europe/London
+      JAVA_TOOL_OPTIONS: -Xms256m -Xmx640m
+    secrets:
+      - metabase_app_db_password
+    ports:
+      - "${METABASE_BIND_ADDRESS:-127.0.0.1}:${METABASE_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/api/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  bi-publisher:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    image: tfl-intel-api:local
+    user: "${AIRFLOW_UID:-50000}:0"
+    profiles: [tools]
+    restart: "no"
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-tfl_intel}
+      POSTGRES_USER: ${POSTGRES_USER:-tfl_intel}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      METABASE_READER_PASSWORD_FILE: /run/secrets/metabase_reader_password
+      DUCKDB_PATH: /data/tfl_intel.duckdb
+    secrets:
+      - postgres_password
+      - metabase_reader_password
+    volumes:
+      - tfl_intel_duckdb_data:/data:ro
+    entrypoint:
+      - python
+      - -m
+      - tfl_intel.analytics.publish_bi_marts
+
+secrets:
+  metabase_app_db_password:
+    file: ./secrets/metabase_app_db_password.txt
+  metabase_reader_password:
+    file: ./secrets/metabase_reader_password.txt
+
+volumes:
+  metabase_db_data:

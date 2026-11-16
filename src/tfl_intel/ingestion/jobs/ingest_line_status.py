@@ -21,19 +21,23 @@ from tfl_intel.ingestion.parsers.line_status_parser import parse_line_status_res
 def main() -> None:
     """Fetch TfL line status data, parse it, and insert observations into Postgres."""
 
-    run()
+    settings = load_settings()
+    for mode in settings.configured_tfl_modes():
+        run(mode)
 
 
-def run() -> int:
+def run(mode: str = "tube") -> int:
     """Run the line status ingestion job and return inserted observation count."""
 
     settings = load_settings()
     configure_logging(settings.log_level)
     logger = get_logger(__name__, source="tfl_line_status")
 
-    ingestion_run_id = f"line-status-{datetime.now(UTC).isoformat()}-{uuid4().hex[:8]}"
+    ingestion_run_id = (
+        f"line-status-{mode}-{datetime.now(UTC).isoformat()}-{uuid4().hex[:8]}"
+    )
     source_name = "tfl_line_api"
-    source_endpoint = "/Mode/tube/Status"
+    source_endpoint = f"/Mode/{mode}/Status"
     observed_at = datetime.now(UTC)
 
     conn = get_connection()
@@ -49,15 +53,21 @@ def run() -> int:
 
         with conn.transaction():
             with TfLLineClient(settings) as client:
-                payload = client.get_line_status_by_mode("tube")
+                payload = client.get_line_status_by_mode(mode)
+
+            if not payload:
+                raise ValueError(f"TfL returned no lines for mode {mode!r}")
 
             observations = parse_line_status_response(payload)
+            if not observations:
+                raise ValueError(f"TfL returned no statuses for mode {mode!r}")
 
             inserted_count = insert_line_status_observations(
                 conn=conn,
                 observations=observations,
                 ingestion_run_id=ingestion_run_id,
                 observed_at=observed_at,
+                source_endpoint=source_endpoint,
             )
 
             mark_pipeline_success(
@@ -73,6 +83,7 @@ def run() -> int:
                 ingestion_run_id=ingestion_run_id,
                 records_received=len(observations),
                 records_inserted=inserted_count,
+                mode=mode,
             )
 
             return inserted_count
@@ -89,6 +100,7 @@ def run() -> int:
             "line_status_ingestion_failed",
             ingestion_run_id=ingestion_run_id,
             error=str(exc),
+            mode=mode,
         )
         raise
 

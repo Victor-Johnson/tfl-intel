@@ -1,0 +1,11 @@
+[Unit]
+Description=Back up the TfL Intel Postgres database
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=tfl-deploy
+Environment=PROJECT_DIR=/opt/tfl-intel
+Environment=BACKUP_DIR=/var/backups/tfl-intel
+ExecStart=/opt/tfl-intel/scripts/backup_postgres.sh

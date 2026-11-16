@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="760" viewBox="0 0 1440 760" role="img" aria-labelledby="title desc">
+  <title id="title">TfL Intel production architecture</title>
+  <desc id="desc">TfL API data flows through Python ingestion, Postgres, DuckDB and dbt into FastAPI, a product dashboard and a read-only Metabase workspace, orchestrated by Airflow.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#08101d"/><stop offset="1" stop-color="#10283a"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-opacity=".25"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#55d6c8"/></marker>
+    <style>
+      .title{font:700 42px system-ui,sans-serif;fill:#f4f7fb}.sub{font:400 18px system-ui,sans-serif;fill:#9fb1c8}
+      .box{fill:#142438;stroke:#31506b;stroke-width:2}.label{font:700 20px system-ui,sans-serif;fill:#f4f7fb}.small{font:400 14px system-ui,sans-serif;fill:#9fb1c8}
+      .flow{stroke:#55d6c8;stroke-width:4;fill:none;marker-end:url(#arrow)}.control{stroke:#ffc857;stroke-width:3;fill:none;stroke-dasharray:8 7;marker-end:url(#arrow)}
+      .chip{fill:#203a50}.chipText{font:600 13px ui-monospace,monospace;fill:#72a7ff}
+    </style>
+  </defs>
+  <rect width="1440" height="760" rx="28" fill="url(#bg)"/>
+  <text x="80" y="88" class="title">TfL Reliability Intelligence</text>
+  <text x="80" y="122" class="sub">A small production data platform with explicit operational and analytical boundaries</text>
+
+  <g filter="url(#shadow)">
+    <rect class="box" x="70" y="260" width="190" height="150" rx="18"/><text class="label" x="165" y="315" text-anchor="middle">TfL Line API</text><text class="small" x="165" y="346" text-anchor="middle">Live status JSON</text><rect class="chip" x="112" y="368" width="106" height="27" rx="13"/><text class="chipText" x="165" y="386" text-anchor="middle">SOURCE</text>
+    <rect class="box" x="315" y="260" width="190" height="150" rx="18"/><text class="label" x="410" y="315" text-anchor="middle">Python</text><text class="small" x="410" y="346" text-anchor="middle">Fetch · parse · load</text><rect class="chip" x="352" y="368" width="116" height="27" rx="13"/><text class="chipText" x="410" y="386" text-anchor="middle">INGESTION</text>
+    <rect class="box" x="560" y="260" width="190" height="150" rx="18"/><text class="label" x="655" y="315" text-anchor="middle">Postgres</text><text class="small" x="655" y="346" text-anchor="middle">Append-only raw truth</text><rect class="chip" x="605" y="368" width="100" height="27" rx="13"/><text class="chipText" x="655" y="386" text-anchor="middle">DURABLE</text>
+    <rect class="box" x="805" y="260" width="190" height="150" rx="18"/><text class="label" x="900" y="315" text-anchor="middle">DuckDB + dbt</text><text class="small" x="900" y="346" text-anchor="middle">Tested analytical marts</text><rect class="chip" x="844" y="368" width="112" height="27" rx="13"/><text class="chipText" x="900" y="386" text-anchor="middle">TRANSFORM</text>
+    <rect class="box" x="1050" y="260" width="150" height="150" rx="18"/><text class="label" x="1125" y="315" text-anchor="middle">FastAPI</text><text class="small" x="1125" y="346" text-anchor="middle">Read-only JSON</text><rect class="chip" x="1082" y="368" width="86" height="27" rx="13"/><text class="chipText" x="1125" y="386" text-anchor="middle">SERVE</text>
+    <rect class="box" x="1255" y="260" width="130" height="150" rx="18"/><text class="label" x="1320" y="310" text-anchor="middle">Consumers</text><text class="small" x="1320" y="340" text-anchor="middle">Dashboard</text><text class="small" x="1320" y="361" text-anchor="middle">+ Metabase BI</text><rect class="chip" x="1275" y="378" width="90" height="27" rx="13"/><text class="chipText" x="1320" y="396" text-anchor="middle">CONSUME</text>
+  </g>
+  <path class="flow" d="M260 335H305"/><path class="flow" d="M505 335H550"/><path class="flow" d="M750 335H795"/><path class="flow" d="M995 335H1040"/><path class="flow" d="M1200 335H1245"/>
+
+  <g filter="url(#shadow)"><rect class="box" x="490" y="540" width="460" height="115" rx="18"/><text class="label" x="720" y="585" text-anchor="middle">Apache Airflow</text><text class="small" x="720" y="616" text-anchor="middle">Five-minute status DAG · daily reference DAG · retries · validation</text></g>
+  <path class="control" d="M610 540C500 485 410 485 410 420"/><path class="control" d="M720 540V420"/><path class="control" d="M830 540C930 485 900 475 900 420"/>
+  <text x="80" y="705" class="small">Public: HTTPS product dashboard, API and curated BI view</text><text x="570" y="705" class="small">Private: Airflow, databases, BI administration and backups</text><text x="1080" y="705" class="small">Data provided by Transport for London</text>
+</svg>

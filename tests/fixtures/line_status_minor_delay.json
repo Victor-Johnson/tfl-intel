@@ -1,6 +1,6 @@
 [
   {
-    "_fixture_note": "Synthetic TfL-like test data. Not copied from the live API.",
+    "_fixture_note": "Synthetic TfL-like test data. ",
     "id": "district",
     "name": "District",
     "modeName": "tube",

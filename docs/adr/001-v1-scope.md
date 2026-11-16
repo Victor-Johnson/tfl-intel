@@ -2,21 +2,23 @@
 
 ## Status
 
-Accepted
+Implemented
 
 ## Context
 
-TfL Intel needs a credible first vertical slice before adding orchestration,
+TfL Intel needed a credible first vertical slice before adding orchestration,
 streaming, object storage, dashboards, forecasting, or AI briefing layers.
 
 ## Decision
 
-Start with TfL Line/Status API ingestion and a lightweight review theme mapping
-scaffold.
+Use the TfL Line/Status API for Tube, Elizabeth line, DLR, London Overground,
+and Tram. Preserve a common raw grain and keep predictive ML outside V1.
 
 Delay Redpanda, MinIO, Dagster, LSTM, Grafana, and AI briefing.
 
 ## Reason
 
-This proves the vertical slice first: source API, Python ingestion, raw data
-shape, parser tests, and a clear path to Postgres, dbt, and Metabase.
+This allowed the project to prove source ingestion, raw-data shape and parser
+tests before adding Postgres, dbt, Airflow and the bundled dashboard. Those
+downstream V1 layers are now implemented; the deliberately delayed streaming,
+forecasting and AI briefing layers remain out of scope.

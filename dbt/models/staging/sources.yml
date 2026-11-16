@@ -1,0 +1,35 @@
+version: 2
+
+sources:
+  - name: raw_snapshot
+    description: Disposable DuckDB copies of the Postgres raw system of record.
+    schema: raw_snapshot
+    tables:
+      - name: pipeline_runs
+        description: Operational metadata for every status ingestion attempt.
+        columns:
+          - name: ingestion_run_id
+            data_tests: [unique, not_null]
+          - name: started_at
+            data_tests: [not_null]
+      - name: tfl_line_status_observations
+        description: Append-style TfL line-status observations.
+        columns:
+          - name: observation_id
+            data_tests: [unique, not_null]
+          - name: ingestion_run_id
+            data_tests: [not_null]
+          - name: line_id
+            data_tests: [not_null]
+          - name: observed_at
+            data_tests: [not_null]
+      - name: tfl_lines
+        description: TfL line reference metadata.
+        columns:
+          - name: line_id
+            data_tests: [unique, not_null]
+      - name: tfl_status_severity_codes
+        description: TfL severity reference values across transport modes.
+        columns:
+          - name: severity_level
+            data_tests: [not_null]

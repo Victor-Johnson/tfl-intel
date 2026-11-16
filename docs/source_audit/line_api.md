@@ -11,8 +11,8 @@
 `/Mode/tube/Status` is the first ingestion endpoint because it provides current
 passenger-visible disruption state with a compact response shape: line identity,
 mode, status severity, optional reason text, timestamps, and validity periods.
-That gives the project a useful raw observation grain before adding richer
-detail payloads or other modes.
+That established the raw observation grain. Production now calls the same
+contract for Tube, Elizabeth line, DLR, London Overground, and Tram.
 
 ## Parser Grain
 

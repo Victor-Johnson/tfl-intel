@@ -1,77 +1,65 @@
 # TfL Intel
 
-**TfL Passenger Pain Intelligence Platform** is a professional data engineering
-and analytics engineering portfolio project for understanding passenger pain
-across TfL operational status data and complaint or review themes.
+Transport for London (TfL) can tell you how a line is running now. But if you
+travel at the same time each week, you might also want to know what has
+happened on that line before.
+TfL Intel keeps a history of line-status checks so you can see current status
+alongside patterns from the times you usually travel.
 
-## V1 Scope
+It covers the Tube, Elizabeth line, DLR, London Overground, and Tram. The
+project checks status every five minutes and shows **collection coverage**
+beside its historical measures. A missed check is a gap in the evidence, not
+proof that service was good.
 
-V1 proves a clean vertical slice:
+## Questions it answers
 
-```text
-TfL Line API -> Python ingestion -> Postgres raw schema
-  -> dbt models later -> Metabase dashboard later
-```
+- Is my line disrupted now, and how recent is that observation?
+- At the weekday and hour I usually travel, how often was disruption observed?
+- Were recent disruptions brief observations or longer sampled episodes?
+- Is there enough collected history to compare two lines fairly?
 
-The first implementation focuses on package structure, source ingestion
-scaffolding, parsing, deterministic IDs, tests, source audit notes, and clear
-commands for continuing the project.
+This is historical context, not a route planner or a prediction. Check TfL's
+live journey planner before travelling. Planned closures currently count as
+disruptions in the historical figures, and a five-minute poll can miss shorter
+events.
 
-## Out Of Scope For V1
+## Where it stands
 
-Redpanda, MinIO, Dagster, Grafana, LSTM forecasting, LLM briefing, production
-orchestration, and external review scraping are intentionally delayed. Review
-examples in this repo are synthetic and exist only to shape future theme logic.
+The ingestion, models, API, and dashboard have passed local and CI checks. A
+private Metabase dashboard has been tested with synthetic fixture data. The
+public deployment is still being prepared, so the planned website is not yet
+a live demo. Real collected history has gaps; charts show coverage so those
+gaps remain visible.
 
-## Architecture Summary
+## How it works
 
-The V1 ingestion path fetches the TfL Line API with a small `httpx` client,
-parses one observation per line status item, and writes raw observations and
-metadata to Postgres. Review theme work starts with a small YAML rules file and
-synthetic sample rows.
+Status checks are stored in Postgres. Airflow rebuilds and tests historical
+views with DuckDB and dbt, and FastAPI serves the dashboard. Validated views
+can also be explored in Metabase. The API reads a published snapshot rather
+than the ingestion database.
 
-## Local Setup
+For the metric definitions, trade-offs, and evidence, see the
+[case study](PORTFOLIO.md). The [runbook](docs/runbook.md) covers setup and
+troubleshooting, and [deployment notes](DEPLOYMENT.md) cover the VPS.
 
-```bash
-uv sync
-cp .env.example .env
-```
+## Run locally
 
-TfL credentials are optional for local tests. The public Line/Status endpoint
-can be explored without hardcoding secrets.
-
-## Daily Commands
-
-```bash
-uv sync
-uv run pytest
-uv run ruff check .
-uv run ruff format .
-uv run mypy src
-uv run python -m tfl_intel.ingestion.jobs.ingest_line_status
-```
-
-## Local API ingestion smoke test
+Install Docker with Compose and Buildx, and [uv](https://docs.astral.sh/uv/).
+Complete the [first-time setup](docs/runbook.md#first-time-setup), including
+private passwords, before running:
 
 ```bash
-docker compose up -d postgres
-
-uv run python -m tfl_intel.ingestion.jobs.ingest_line_status
-
-docker exec -it tfl_intel_postgres psql -U tfl_intel -d tfl_intel -c "SELECT COUNT(*) FROM raw.pipeline_runs;"
-
-docker exec -it tfl_intel_postgres psql -U tfl_intel -d tfl_intel -c "SELECT COUNT(*) FROM raw.tfl_line_status_observations;"
+make postgres-up
+make postgres-init
+make ingest-reference-data
+make ingest-line-status
+make duckdb-refresh
+make stack-up
 ```
 
-## Current Status
+Open `http://localhost:8000/dashboard`. Run `make check` for the Python and
+dbt checks. The runbook explains scheduled polling with Airflow and optional
+Metabase setup.
 
-- [x] Python `src/` package scaffold
-- [x] TfL Line/Status client skeleton
-- [x] Line status parser and unit tests
-- [x] Deterministic ID helpers
-- [x] Safe `.env.example`
-- [x] Review theme scaffold with synthetic data
-- [x] Architecture and ADR docs
-- [x] Postgres raw schema
-- [ ] dbt models
-- [ ] Metabase dashboard
+Data provided by [Transport for London](https://tfl.gov.uk/info-for/open-data-users/).
+TfL Intel is an independent, unofficial project and is not endorsed by TfL.

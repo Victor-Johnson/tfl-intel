@@ -1,0 +1,8 @@
+tfl_intel:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DUCKDB_PATH', '../data/tfl_intel.duckdb') }}"
+      schema: analytics
+      threads: 4

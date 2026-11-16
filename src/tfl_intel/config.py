@@ -1,6 +1,7 @@
 """Application configuration loaded from environment variables."""
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,15 +14,18 @@ class Settings(BaseSettings):
         default="https://api.tfl.gov.uk/Line", alias="TFL_API_BASE_URL"
     )
     tfl_app_key: str | None = Field(default=None, alias="TFL_APP_KEY")
-    database_url: str = Field(
-        default="postgresql://tfl_intel:tfl_intel@localhost:5432/tfl_intel",
-        alias="DATABASE_URL",
+    tfl_modes: str = Field(
+        default="tube,elizabeth-line,dlr,overground,tram",
+        alias="TFL_MODES",
     )
+    database_url: str | None = Field(default=None, alias="DATABASE_URL")
     postgres_host: str = Field(default="localhost", alias="POSTGRES_HOST")
     postgres_port: int = Field(default=5432, alias="POSTGRES_PORT")
     postgres_db: str = Field(default="tfl_intel", alias="POSTGRES_DB")
     postgres_user: str = Field(default="tfl_intel", alias="POSTGRES_USER")
-    postgres_password: str = Field(default="tfl_intel", alias="POSTGRES_PASSWORD")
+    postgres_password_file: str | None = Field(
+        default="secrets/postgres_password.txt", alias="POSTGRES_PASSWORD_FILE"
+    )
 
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
@@ -31,6 +35,38 @@ class Settings(BaseSettings):
         extra="ignore",
         populate_by_name=True,
     )
+
+    def postgres_conninfo(self) -> str:
+        """Build a psycopg conninfo string without hardcoding a password."""
+
+        if self.database_url:
+            return self.database_url
+
+        conninfo = (
+            f"host={self.postgres_host} "
+            f"port={self.postgres_port} "
+            f"dbname={self.postgres_db} "
+            f"user={self.postgres_user}"
+        )
+
+        if self.postgres_password_file:
+            password_path = Path(self.postgres_password_file)
+            if password_path.exists():
+                password = password_path.read_text(encoding="utf-8").strip()
+                conninfo = f"{conninfo} password={password}"
+
+        return conninfo
+
+    def configured_tfl_modes(self) -> tuple[str, ...]:
+        """Return unique, normalized modes in configured order."""
+
+        modes = dict.fromkeys(
+            mode.strip().lower() for mode in self.tfl_modes.split(",") if mode.strip()
+        )
+        if not modes:
+            msg = "TFL_MODES must contain at least one mode"
+            raise ValueError(msg)
+        return tuple(modes)
 
 
 def load_settings() -> Settings:

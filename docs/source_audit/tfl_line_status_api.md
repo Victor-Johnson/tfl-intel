@@ -2,7 +2,8 @@
 
 ## Endpoint
 
-`https://api.tfl.gov.uk/Line/Mode/tube,dlr,overground,elizabeth-line/Status`
+`https://api.tfl.gov.uk/Line/Mode/{mode}/Status`, where `{mode}` is one of
+`tube`, `elizabeth-line`, `dlr`, `overground`, or `tram`.
 
 ## Method
 
@@ -33,8 +34,9 @@ One raw parsed observation per line status item.
 
 ## Polling Strategy
 
-V1 should be manually runnable. A future scheduler can poll at a small fixed
-interval once raw Postgres tables and idempotency checks are designed.
+Airflow polls each configured mode every five minutes. Every mode receives its
+own pipeline-run identifier, so partial source failures remain diagnosable and
+successful retries remain idempotent.
 
 ## Risks
 

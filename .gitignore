@@ -1,20 +1,38 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
-*.pyc
 build/
 dist/
 wheels/
 *.egg-info
 
 # Virtual environments
-.venv
 .venv/
-.env
 
-# Local environment and caches
+# Local environment and secrets
 .env
+*.env
+!.env.example
+secrets/
+
+# Local caches and logs
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
 .DS_Store
+*.log
+*.duckdb
+
+# Supplied reference material, not redistributed with the public project
+docs/Tfl guidelines.pdf*
+
+# Airflow
+airflow/logs/
+airflow/**/*.pyc
+ingestion_loop.log
+
+# dbt build artifacts
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml

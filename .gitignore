@@ -23,8 +23,16 @@ secrets/
 *.log
 *.duckdb
 
-docs/
+# Supplied reference material, not redistributed with the public project
+docs/Tfl guidelines.pdf*
 
-#Airflow 
+# Airflow
 airflow/logs/
 airflow/**/*.pyc
+ingestion_loop.log
+
+# dbt build artifacts
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml

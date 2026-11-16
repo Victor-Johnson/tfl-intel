@@ -1,8 +1,10 @@
-from fastapi.testclient import TestClient
+import pytest
+from httpx import AsyncClient
 
 
-def test_pipeline_freshness_returns_expected_schema(client: TestClient) -> None:
-    response = client.get("/api/v1/pipeline/freshness")
+@pytest.mark.anyio
+async def test_pipeline_freshness_returns_expected_schema(client: AsyncClient) -> None:
+    response = await client.get("/api/v1/pipeline/freshness")
 
     assert response.status_code == 200
     payload = response.json()
@@ -12,8 +14,9 @@ def test_pipeline_freshness_returns_expected_schema(client: TestClient) -> None:
     assert payload["minutes_since_latest_success"] == 4
 
 
-def test_pipeline_latest_run_returns_expected_schema(client: TestClient) -> None:
-    response = client.get("/api/v1/pipeline/latest-run")
+@pytest.mark.anyio
+async def test_pipeline_latest_run_returns_expected_schema(client: AsyncClient) -> None:
+    response = await client.get("/api/v1/pipeline/latest-run")
 
     assert response.status_code == 200
     payload = response.json()

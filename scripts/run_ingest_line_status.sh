@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-POSTGRES_PASSWORD_FILE="${POSTGRES_PASSWORD_FILE:-/run/secrets/postgres_password}"
+POSTGRES_PASSWORD_FILE="${POSTGRES_PASSWORD_FILE:-/run/secrets/postgres_password.txt}"
 
 if [ ! -r "$POSTGRES_PASSWORD_FILE" ]; then
   echo "Postgres password secret is not readable at $POSTGRES_PASSWORD_FILE" >&2

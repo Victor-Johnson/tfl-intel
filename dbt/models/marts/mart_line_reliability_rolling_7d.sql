@@ -25,6 +25,18 @@ with rolling as (
         order by service_date
         range between interval 6 day preceding and current row
     )
+),
+with_expected as (
+    select
+        *,
+        cast(date_diff(
+            'minute',
+            cast(service_date - interval 6 day as timestamp)
+                at time zone 'Europe/London',
+            cast(service_date + interval 1 day as timestamp)
+                at time zone 'Europe/London'
+        ) / 5 as integer) as expected_full_week_observations
+    from rolling
 )
 select
     service_date as window_end_date,
@@ -39,18 +51,22 @@ select
     estimated_disruption_minutes_7d,
     disruption_event_count_7d,
     resolved_disruption_event_count_7d,
+    expected_full_week_observations,
     round(
         100.0 * good_service_observations_7d
         / nullif(total_observations_7d, 0),
         2
     ) as observed_uptime_pct_7d,
     round(
-        least(100.0, 100.0 * total_observations_7d / 2016),
+        least(100.0, 100.0 * total_observations_7d
+            / expected_full_week_observations),
         2
     ) as coverage_pct_7d,
     case
-        when total_observations_7d / 2016.0 < 0.70 then 'insufficient'
-        when total_observations_7d / 2016.0 < 0.90 then 'provisional'
+        when total_observations_7d / expected_full_week_observations < 0.70
+            then 'insufficient'
+        when total_observations_7d / expected_full_week_observations < 0.90
+            then 'provisional'
         else 'reliable'
     end as coverage_quality_7d,
     dense_rank() over (
@@ -60,4 +76,4 @@ select
                 / nullif(total_observations_7d, 0),
             line_name
     ) as least_reliable_rank_7d
-from rolling
+from with_expected

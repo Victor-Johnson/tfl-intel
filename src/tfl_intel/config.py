@@ -14,6 +14,10 @@ class Settings(BaseSettings):
         default="https://api.tfl.gov.uk/Line", alias="TFL_API_BASE_URL"
     )
     tfl_app_key: str | None = Field(default=None, alias="TFL_APP_KEY")
+    tfl_modes: str = Field(
+        default="tube,elizabeth-line,dlr,overground,tram",
+        alias="TFL_MODES",
+    )
     database_url: str | None = Field(default=None, alias="DATABASE_URL")
     postgres_host: str = Field(default="localhost", alias="POSTGRES_HOST")
     postgres_port: int = Field(default=5432, alias="POSTGRES_PORT")
@@ -52,6 +56,17 @@ class Settings(BaseSettings):
                 conninfo = f"{conninfo} password={password}"
 
         return conninfo
+
+    def configured_tfl_modes(self) -> tuple[str, ...]:
+        """Return unique, normalized modes in configured order."""
+
+        modes = dict.fromkeys(
+            mode.strip().lower() for mode in self.tfl_modes.split(",") if mode.strip()
+        )
+        if not modes:
+            msg = "TFL_MODES must contain at least one mode"
+            raise ValueError(msg)
+        return tuple(modes)
 
 
 def load_settings() -> Settings:

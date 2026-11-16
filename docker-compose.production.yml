@@ -1,0 +1,92 @@
+name: tfl_intel
+
+x-production-logging: &production-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    mem_limit: 768m
+    cpus: 1.0
+    logging: *production-logging
+
+  duckdb:
+    mem_limit: 768m
+    cpus: 1.0
+    logging: *production-logging
+
+  api:
+    mem_limit: 384m
+    cpus: 0.5
+    logging: *production-logging
+    networks:
+      backend: null
+      proxy:
+        aliases:
+          - tfl-intel-api
+
+  duckdb-permissions:
+    mem_limit: 128m
+    cpus: 0.25
+    logging: *production-logging
+
+  airflow-db:
+    mem_limit: 384m
+    cpus: 0.5
+    logging: *production-logging
+
+  airflow-init:
+    mem_limit: 768m
+    cpus: 1.0
+    logging: *production-logging
+
+  airflow-webserver:
+    mem_limit: 640m
+    cpus: 0.75
+    logging: *production-logging
+
+  airflow-scheduler:
+    mem_limit: 768m
+    cpus: 1.0
+    logging: *production-logging
+    environment:
+      PUBLISH_BI_MARTS: "true"
+
+  metabase-db:
+    mem_limit: 384m
+    cpus: 0.5
+    logging: *production-logging
+
+  metabase:
+    mem_limit: 1024m
+    cpus: 1.0
+    logging: *production-logging
+    networks:
+      backend: null
+      proxy:
+        aliases:
+          - tfl-intel-metabase
+
+  bi-publisher:
+    mem_limit: 384m
+    cpus: 0.5
+    logging: *production-logging
+
+networks:
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:-npm_proxy}
+
+volumes:
+  tfl_intel_postgres_data:
+    name: tfl_intel_postgres_data
+  tfl_intel_duckdb_data:
+    name: tfl_intel_duckdb_data
+  airflow_db_data:
+    name: tfl_intel_airflow_db_data
+  airflow_logs:
+    name: tfl_intel_airflow_logs
+  metabase_db_data:
+    name: tfl_intel_metabase_db_data

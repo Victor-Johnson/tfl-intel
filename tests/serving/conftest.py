@@ -1,9 +1,9 @@
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
 import duckdb
 import pytest
-from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 
 from tfl_intel.serving.app import app
 from tfl_intel.serving.config import get_settings
@@ -101,8 +101,7 @@ def test_duckdb_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterato
                 finished_at TIMESTAMP,
                 records_received INTEGER,
                 records_inserted INTEGER,
-                latest_success_finished_at TIMESTAMP,
-                minutes_since_latest_success INTEGER
+                latest_success_finished_at TIMESTAMP
             )
             """
         )
@@ -115,8 +114,7 @@ def test_duckdb_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterato
                 TIMESTAMP '2026-07-06 10:05:20',
                 11,
                 11,
-                TIMESTAMP '2026-07-06 10:05:20',
-                4
+                current_timestamp - interval '4 minutes'
             )
             """
         )
@@ -167,6 +165,7 @@ def test_duckdb_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterato
                 service_date DATE,
                 line_id TEXT,
                 line_name TEXT,
+                mode_name TEXT,
                 total_observations INTEGER,
                 good_service_observations INTEGER,
                 disrupted_observations INTEGER,
@@ -184,9 +183,9 @@ def test_duckdb_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterato
         conn.execute(
             """
             INSERT INTO analytics.line_reliability_daily VALUES
-                (DATE '2026-07-06', 'central', 'Central', 200, 150, 50,
+                (DATE '2026-07-06', 'central', 'Central', 'tube', 200, 150, 50,
                  1000, 250, 75.0, 69.44, 'insufficient', 2, 1, 35.0),
-                (DATE '2026-07-05', 'central', 'Central', 288, 275, 13,
+                (DATE '2026-07-05', 'central', 'Central', 'tube', 288, 275, 13,
                  1440, 65, 95.49, 100.0, 'reliable', 1, 1, 20.0)
             """
         )
@@ -197,6 +196,7 @@ def test_duckdb_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterato
                 window_start_date DATE,
                 line_id TEXT,
                 line_name TEXT,
+                mode_name TEXT,
                 total_observations_7d INTEGER,
                 good_service_observations_7d INTEGER,
                 disrupted_observations_7d INTEGER,
@@ -214,7 +214,7 @@ def test_duckdb_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterato
         conn.execute(
             """
             INSERT INTO analytics.line_reliability_rolling_7d VALUES (
-                DATE '2026-07-06', DATE '2026-06-30', 'central', 'Central',
+                DATE '2026-07-06', DATE '2026-06-30', 'central', 'Central', 'tube',
                 488, 425, 63, 2440, 315, 3, 2, 87.09, 24.21,
                 'insufficient', 1
             )
@@ -226,6 +226,7 @@ def test_duckdb_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterato
                 disruption_event_id TEXT,
                 line_id TEXT,
                 line_name TEXT,
+                mode_name TEXT,
                 event_started_at TIMESTAMP,
                 event_ended_at TIMESTAMP,
                 event_duration_minutes DOUBLE,
@@ -241,11 +242,53 @@ def test_duckdb_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterato
         conn.execute(
             """
             INSERT INTO analytics.disruption_events VALUES (
-                'event-1', 'central', 'Central',
+                'event-1', 'central', 'Central', 'tube',
                 TIMESTAMP '2026-07-06 10:05:00',
                 TIMESTAMP '2026-07-06 10:40:00', 35.0, 7, 35,
                 'Minor Delays', 70, 'Synthetic signal failure.', TRUE
             )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE analytics.network_status_mix_daily (
+                service_date DATE,
+                mode_name TEXT,
+                status_description TEXT,
+                is_disrupted BOOLEAN,
+                observation_count INTEGER
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO analytics.network_status_mix_daily VALUES
+                (DATE '2026-07-06', 'tube', 'Good Service', FALSE, 150),
+                (DATE '2026-07-06', 'tube', 'Minor Delays', TRUE, 50),
+                (DATE '2026-07-05', 'tube', 'Good Service', FALSE, 275),
+                (DATE '2026-07-05', 'tube', 'Minor Delays', TRUE, 13)
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE analytics.network_disruption_hourly (
+                service_date DATE,
+                mode_name TEXT,
+                weekday_index INTEGER,
+                weekday_name TEXT,
+                hour_of_day INTEGER,
+                observation_count INTEGER,
+                disrupted_observation_count INTEGER,
+                disruption_pct DOUBLE
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO analytics.network_disruption_hourly VALUES
+                (DATE '2026-07-06', 'tube', 1, 'Mon', 8, 20, 5, 25.0),
+                (DATE '2026-07-06', 'tube', 1, 'Mon', 9, 20, 2, 10.0),
+                (DATE '2026-07-05', 'tube', 0, 'Sun', 8, 20, 0, 0.0)
             """
         )
 
@@ -256,5 +299,12 @@ def test_duckdb_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterato
 
 
 @pytest.fixture
-def client(test_duckdb_path: Path) -> TestClient:
-    return TestClient(app)
+async def client(test_duckdb_path: Path) -> AsyncIterator[AsyncClient]:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as test_client:
+        yield test_client
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"

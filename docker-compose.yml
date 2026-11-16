@@ -24,7 +24,7 @@ services:
     secrets:
       - postgres_password
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - tfl_intel_postgres_data:/var/lib/postgresql/data
     healthcheck: *postgres-healthcheck
@@ -50,7 +50,7 @@ services:
     volumes:
       - .:/workspace
       - tfl_intel_duckdb_data:/data
-    entrypoint: ["uv", "run", "--no-project", "python", "--version"]
+    entrypoint: ["uv", "run", "--frozen", "--no-dev", "python", "--version"]
     restart: "no"
 
   api:
@@ -63,7 +63,7 @@ services:
       DUCKDB_PATH: /data/tfl_intel.duckdb
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "${API_BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8000}:8000"
     volumes:
       - tfl_intel_duckdb_data:/data:ro
     healthcheck:

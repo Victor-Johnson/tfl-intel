@@ -1,0 +1,60 @@
+{
+  "name": "TfL Reliability Intelligence Platform",
+  "description": "A live data platform that turns short-lived status updates across five TfL rail and tram modes into tested, coverage-aware reliability analytics.",
+  "type": "data",
+  "sort_order": 0,
+  "url": "https://tfl-intel.victorjohnson.dev",
+  "tags": [
+    "Python",
+    "PostgreSQL",
+    "DuckDB",
+    "dbt",
+    "Apache Airflow",
+    "FastAPI",
+    "Metabase",
+    "Docker",
+    "GitHub Actions"
+  ],
+  "features": [
+    "Five-minute idempotent ingestion from the TfL Unified API",
+    "Tube, Elizabeth line, DLR, London Overground and Tram coverage",
+    "Postgres raw system of record with retained payloads and pipeline-run metadata",
+    "dbt staging, intermediate, fact, dimension and reliability mart layers",
+    "Coverage-aware observed uptime and inferred disruption episodes",
+    "Mode comparison, status mix, coverage scatter and hourly disruption heatmap",
+    "Read-only Metabase BI workspace backed by atomically published dbt marts",
+    "Read-only FastAPI contract with a responsive operational dashboard",
+    "Airflow orchestration, data-quality gates, CI/CD and recoverable backups"
+  ],
+  "overview": "<p>TfL Intel captures changing line-status snapshots and turns them into an auditable history. It separates operational storage from analytical serving and reports collection coverage alongside every reliability metric.</p>",
+  "full_description": "<p>The project demonstrates a complete data-engineering lifecycle: retried ingestion, deterministic identifiers, idempotent loading, raw evidence retention, tested dbt models, scheduled orchestration, a typed API, a live product dashboard and a Metabase BI workspace.</p><p>Postgres is the durable source of truth. Airflow snapshots it into DuckDB, dbt publishes tested marts, and FastAPI serves those marts without receiving operational database credentials. Validated marts are separately published for Metabase through a schema-restricted reader. <a href=\"https://github.com/Victor-Johnson/tfl-intel\" target=\"_blank\" rel=\"noopener\">View the source on GitHub</a>.</p>",
+  "challenges": "<p>A missing API observation cannot safely be interpreted as good service. The model therefore calculates uptime only from observed buckets and publishes a separate coverage percentage and quality label.</p>",
+  "outcome": "<p>A deployable single-host platform that makes mode comparisons, status mix, hourly patterns, disruption history, observed uptime and analytical confidence visible through one public interface.</p>",
+  "tech_stack": "<p>Python 3.13, httpx, Pydantic, psycopg, PostgreSQL 16, DuckDB, dbt-duckdb, Apache Airflow, FastAPI, Metabase, Docker Compose, GitHub Actions and Nginx Proxy Manager.</p>",
+  "images": [
+    {
+      "url": "https://raw.githubusercontent.com/Victor-Johnson/tfl-intel/main/docs/portfolio/assets/dashboard-preview.svg",
+      "caption": "Coverage-aware reliability dashboard preview using synthetic fixture values"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Victor-Johnson/tfl-intel/main/docs/portfolio/assets/architecture.svg",
+      "caption": "Production architecture and trust boundaries"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Victor-Johnson/tfl-intel/main/docs/portfolio/assets/dbt-lineage.svg",
+      "caption": "Source-to-dashboard dbt model lineage"
+    }
+  ],
+  "code_snippets": [
+    {
+      "title": "Content-addressed status identity",
+      "language": "python",
+      "code": "def make_status_fingerprint(line_id, status, reason, start, end):\n    parts = [line_id, status, reason, start, end]\n    return stable_hash(_join_parts(parts))"
+    },
+    {
+      "title": "Coverage remains separate from uptime",
+      "language": "sql",
+      "code": "round(100.0 * good_service_observations / nullif(total_observations, 0), 2) as observed_uptime_pct,\nround(100.0 * total_observations / 288, 2) as full_day_coverage_pct"
+    }
+  ]
+}

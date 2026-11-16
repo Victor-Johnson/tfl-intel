@@ -17,9 +17,9 @@ ENV UV_PROJECT_ENVIRONMENT=/opt/tfl-venv \
 
 WORKDIR /opt/tfl-intel
 COPY --chown=airflow:root pyproject.toml uv.lock README.md ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --group analytics --no-install-project
 
 COPY --chown=airflow:root src ./src
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --group analytics
 
 WORKDIR /opt/airflow

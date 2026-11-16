@@ -24,7 +24,7 @@ with DAG(
     max_active_runs=1,
     tags=["tfl", "ingestion", "duckdb", "serving"],
 ) as dag:
-    # bash operator using the bash command use trailing space commands for the sh files 
+    # bash operator using the bash command use trailing space commands for the sh files
     ingest_line_status = BashOperator(
         task_id="ingest_line_status",
         bash_command="bash /workspace/scripts/run_ingest_line_status.sh ",

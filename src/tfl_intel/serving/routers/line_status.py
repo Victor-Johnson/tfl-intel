@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/v1/lines", tags=["line-status"])
 
 
 @router.get("/current-status", response_model=list[CurrentLineStatusResponse])
-def current_status() -> list[dict]:
+async def current_status() -> list[dict]:
     """Return the latest observed status per TfL line."""
 
     return fetch_all(
@@ -33,7 +33,7 @@ def current_status() -> list[dict]:
 
 
 @router.get("/status-summary", response_model=list[LineStatusSummaryResponse])
-def status_summary() -> list[dict]:
+async def status_summary() -> list[dict]:
     """Return grouped observation counts by line and status."""
 
     return fetch_all(
@@ -53,7 +53,7 @@ def status_summary() -> list[dict]:
 
 
 @router.get("/{line_id}/history", response_model=list[LineStatusHistoryItem])
-def line_history(
+async def line_history(
     line_id: str,
     limit: int = Query(default=50, ge=1, le=500),
 ) -> list[dict]:

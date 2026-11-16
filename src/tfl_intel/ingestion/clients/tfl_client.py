@@ -1,5 +1,7 @@
 """Client for the TfL Line API endpoints used by V1 ingestion."""
 
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 import httpx
@@ -15,11 +17,40 @@ from tfl_intel.config import Settings
 
 
 def _is_retryable(exc: BaseException) -> bool:
-    """Retry timeouts and server errors; client errors are permanent."""
+    """Retry transient failures; most client errors are permanent."""
 
     if isinstance(exc, httpx.TimeoutException):
         return True
-    return isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code >= 500
+    return isinstance(exc, httpx.HTTPStatusError) and (
+        exc.response.status_code == 429 or exc.response.status_code >= 500
+    )
+
+
+_exponential_wait = wait_exponential(multiplier=0.5, max=8)
+
+
+def _wait_for_retry(retry_state: Any) -> float:
+    """Respect a bounded Retry-After on 429, otherwise use backoff."""
+
+    fallback = float(_exponential_wait(retry_state))
+    exc = retry_state.outcome.exception() if retry_state.outcome else None
+    if not isinstance(exc, httpx.HTTPStatusError) or exc.response.status_code != 429:
+        return fallback
+
+    header = exc.response.headers.get("Retry-After")
+    if header is None:
+        return fallback
+    try:
+        delay = float(header)
+    except ValueError:
+        try:
+            retry_at = parsedate_to_datetime(header)
+        except (TypeError, ValueError):
+            return fallback
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=UTC)
+        delay = (retry_at - datetime.now(UTC)).total_seconds()
+    return min(8.0, max(0.0, delay))
 
 
 class TfLLineClient:
@@ -78,11 +109,11 @@ class TfLLineClient:
     @retry(
         retry=retry_if_exception(_is_retryable),
         stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=0.5, max=8),
+        wait=_wait_for_retry,
         reraise=True,
     )
     def _send(self, url: str, params: dict[str, str]) -> httpx.Response:
-        """Issue one GET, retrying timeouts and 5xx with exponential backoff."""
+        """Issue one GET with bounded retries for transient responses."""
 
         response = self._client.get(url, params=params)
         response.raise_for_status()

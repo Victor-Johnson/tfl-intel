@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: int_line_status_per_poll
+    description: >-
+      One canonical status per Tube line and five-minute polling bucket. The
+      worst status is selected within a response and the latest response wins
+      when multiple runs overlap one bucket.
+    columns:
+      - name: observation_id
+        data_tests: [unique, not_null]
+      - name: line_id
+        data_tests: [not_null]
+      - name: observation_bucket
+        data_tests: [not_null]
+      - name: is_disrupted
+        data_tests: [not_null]
+
+  - name: int_line_status_intervals
+    description: >-
+      Time between canonical polls. No more than five minutes is attributed to
+      the previous status; longer time is exposed as an unknown collection gap.
+    columns:
+      - name: observation_id
+        data_tests: [unique, not_null]
+      - name: attributed_minutes
+        data_tests: [not_null]
+      - name: unknown_gap_minutes
+        data_tests: [not_null]

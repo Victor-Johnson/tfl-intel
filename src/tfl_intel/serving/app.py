@@ -4,7 +4,13 @@ from fastapi import FastAPI
 
 from tfl_intel.common.logging import configure_logging
 from tfl_intel.serving.config import load_settings
-from tfl_intel.serving.routers import health, line_status, pipeline
+from tfl_intel.serving.routers import (
+    dashboard,
+    health,
+    line_status,
+    pipeline,
+    reliability,
+)
 
 settings = load_settings()
 configure_logging(settings.log_level)
@@ -18,3 +24,5 @@ app = FastAPI(
 app.include_router(health.router)
 app.include_router(line_status.router)
 app.include_router(pipeline.router)
+app.include_router(reliability.router)
+app.include_router(dashboard.router)

@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TfL Reliability Intelligence</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090e15; --panel: #121b27; --panel-2: #192536;
+      --text: #f4f7fb; --muted: #96a6bb; --line: #29384c;
+      --accent: #55d6c8; --blue: #72a7ff; --danger: #ff7180;
+      --warn: #ffc857; --good: #67dc93;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--text);
+      font: 15px/1.5 Inter, ui-sans-serif, system-ui, sans-serif;
+      background: radial-gradient(circle at 80% -20%, #153f50 0, transparent 38rem), var(--bg);
+    }
+    main { width: min(1180px, calc(100% - 32px)); margin: auto; padding: 42px 0 64px; }
+    header, .panel-head, .controls, .event-top, .legend, .status-row {
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    }
+    header { align-items: end; margin-bottom: 28px; }
+    .eyebrow { color: var(--accent); text-transform: uppercase; letter-spacing: .14em; font-size: 12px; font-weight: 750; }
+    h1 { margin: 4px 0 5px; font-size: clamp(30px, 5vw, 54px); letter-spacing: -.045em; line-height: 1; }
+    h2 { font-size: 18px; margin: 0; }
+    p, .muted { color: var(--muted); margin: 0; }
+    .live { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; color: var(--muted); }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--good); box-shadow: 0 0 16px var(--good); }
+    .dot.stale { background: var(--danger); box-shadow: 0 0 16px var(--danger); }
+    .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+    .card, .panel, .notice { border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, transparent); border-radius: 16px; }
+    .card { padding: 18px; min-height: 112px; }
+    .card span { color: var(--muted); font-size: 13px; }
+    .card strong { display: block; margin-top: 12px; font-size: 28px; letter-spacing: -.03em; }
+    .notice { display: none; padding: 13px 16px; margin: 0 0 18px; color: var(--warn); border-color: #6b5728; background: #241f13; }
+    .notice.show { display: block; }
+    .notice.danger { color: var(--danger); border-color: #6d303b; background: #29161c; }
+    .panel { overflow: hidden; margin-top: 18px; }
+    .network-controls { padding: 15px 20px; margin-bottom: 18px; }
+    .viz-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+    .viz-grid .panel { margin-top: 0; }
+    .viz-body { padding: 18px 20px; min-height: 250px; }
+    .status-bar { display: flex; height: 34px; overflow: hidden; border-radius: 8px; background: var(--panel-2); margin: 12px 0 20px; }
+    .status-segment { min-width: 2px; border-right: 2px solid var(--panel); }
+    .status-segment.good { background: var(--good); }
+    .status-segment.disrupted { background: var(--danger); }
+    .status-list { display: grid; gap: 9px; }
+    .status-row { font-size: 13px; }
+    .status-row i { width: 9px; height: 9px; border-radius: 50%; background: var(--good); }
+    .status-row i.disrupted { background: var(--danger); }
+    .status-row span:first-of-type { flex: 1; }
+    #scatter-chart { width: 100%; height: auto; min-height: 220px; }
+    .scatter-dot { fill: var(--accent); stroke: var(--bg); stroke-width: 2; }
+    .heatmap-wrap { padding: 18px 20px 22px; overflow-x: auto; }
+    .heatmap { display: grid; grid-template-columns: 38px repeat(24, minmax(22px, 1fr)); gap: 3px; min-width: 720px; }
+    .heat-cell, .heat-label { min-height: 24px; border-radius: 4px; display: grid; place-items: center; font-size: 10px; }
+    .heat-cell { background: var(--panel-2); color: transparent; }
+    .heat-cell:hover { color: var(--text); outline: 1px solid var(--text); }
+    .heat-label { color: var(--muted); }
+    .mode-table td:nth-child(n+3) { font-variant-numeric: tabular-nums; }
+    .panel-head { padding: 18px 20px; border-bottom: 1px solid var(--line); }
+    .controls { justify-content: flex-start; flex-wrap: wrap; }
+    label { color: var(--muted); font-size: 13px; }
+    select {
+      margin-left: 7px; padding: 7px 30px 7px 10px; color: var(--text);
+      background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+    }
+    .chart-wrap { padding: 18px 20px 8px; }
+    #trend-chart { width: 100%; height: auto; min-height: 230px; }
+    .chart-grid { stroke: var(--line); stroke-width: 1; }
+    .chart-label { fill: var(--muted); font-size: 11px; }
+    .uptime-line { fill: none; stroke: var(--accent); stroke-width: 3; }
+    .coverage-line { fill: none; stroke: var(--blue); stroke-width: 2; stroke-dasharray: 6 5; }
+    .legend { justify-content: flex-end; padding: 0 20px 15px; color: var(--muted); font-size: 12px; }
+    .key::before { content: ""; display: inline-block; width: 18px; height: 3px; margin-right: 6px; vertical-align: middle; background: var(--accent); }
+    .key.coverage::before { background: var(--blue); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 13px 20px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: var(--panel-2); }
+    .rank { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .metric { font-variant-numeric: tabular-nums; font-weight: 700; }
+    .bar { width: 110px; height: 6px; background: #253347; border-radius: 99px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 9px; }
+    .bar > i { display: block; height: 100%; background: var(--accent); }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+    .insufficient { color: var(--danger); background: #421f29; }
+    .provisional { color: var(--warn); background: #40351c; }
+    .reliable { color: var(--good); background: #173c2a; }
+    .event-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 16px; }
+    .event { padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2); }
+    .event p { margin-top: 8px; font-size: 13px; }
+    .status { color: var(--danger); font-weight: 700; }
+    .empty, .error { padding: 26px 20px; color: var(--muted); }
+    .error { color: var(--danger); }
+    footer { margin-top: 24px; color: var(--muted); font-size: 12px; text-align: center; }
+    footer a { color: var(--accent); }
+    .bi-link { color: var(--accent); text-decoration: none; font-weight: 700; }
+    .bi-link:hover { text-decoration: underline; }
+    @media (max-width: 800px) {
+      header { display: block; } .live { margin-top: 14px; }
+      .cards { grid-template-columns: repeat(2, 1fr); }
+      .event-grid, .viz-grid { grid-template-columns: 1fr; } .table-wrap { overflow-x: auto; }
+    }
+    @media (max-width: 480px) {
+      main { width: min(100% - 20px, 1180px); padding-top: 28px; }
+      .cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <div class="eyebrow">TfL Intel / Operations</div>
+        <h1>Reliability pulse</h1>
+        <p>Coverage-aware performance across TfL rail and tram services.</p>
+      </div>
+      <div>
+        <div class="live"><i class="dot" id="health-dot"></i><span id="freshness">Loading snapshot…</span></div>
+        <p><a class="bi-link" href="https://tfl-bi.victorjohnson.dev" rel="noopener">Open BI workspace ↗</a></p>
+      </div>
+    </header>
+
+    <section class="cards" aria-label="Summary metrics">
+      <article class="card"><span>Least reliable line</span><strong id="least-line">—</strong></article>
+      <article class="card"><span>Best observed uptime</span><strong id="best-uptime">—</strong></article>
+      <article class="card"><span>Selected open disruptions</span><strong id="open-events">—</strong></article>
+      <article class="card"><span>Seven-day coverage</span><strong id="coverage">—</strong></article>
+    </section>
+    <aside class="notice" id="quality-notice" role="status"></aside>
+
+    <section class="panel network-controls">
+      <div class="controls">
+        <label>Mode<select id="mode-select" aria-label="Filter transport mode"><option value="">All modes</option></select></label>
+        <label>Network window<select id="network-days" aria-label="Select network window"><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option></select></label>
+        <span class="muted">Filters the network views and leaderboard</span>
+      </div>
+    </section>
+
+    <section class="viz-grid" aria-label="Network visualisations">
+      <article class="panel">
+        <div class="panel-head"><h2>Passenger-visible status mix</h2><span class="muted" id="status-total">—</span></div>
+        <div class="viz-body"><div class="status-bar" id="status-bar"></div><div class="status-list" id="status-list"><div class="empty">Loading status mix…</div></div></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><h2>Coverage vs observed uptime</h2><span class="muted">Each dot is a line</span></div>
+        <div class="viz-body"><svg id="scatter-chart" viewBox="0 0 520 230" role="img" aria-label="Line coverage versus observed uptime scatter plot"></svg></div>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Disruption rate by weekday and hour</h2><span class="muted">Europe/London time · darker means more disruption</span></div>
+      <div class="heatmap-wrap"><div class="heatmap" id="heatmap"><div class="empty">Loading hourly pattern…</div></div></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Mode comparison</h2><span class="muted">Weighted uptime, coverage-aware</span></div>
+      <div class="table-wrap">
+        <table class="mode-table"><thead><tr><th>Mode</th><th>Lines</th><th>Observed uptime</th><th>Coverage</th><th>Disrupted samples</th><th>Events</th><th>Mean recovery</th></tr></thead>
+        <tbody id="mode-summary"><tr><td colspan="7" class="empty">Loading mode comparison…</td></tr></tbody></table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Daily reliability trend</h2>
+        <div class="controls">
+          <label>Line<select id="line-select" aria-label="Select line"></select></label>
+          <label>Window<select id="days-select" aria-label="Select day window"><option value="7">7 days</option><option value="14">14 days</option><option value="30" selected>30 days</option></select></label>
+        </div>
+      </div>
+      <div class="chart-wrap" id="chart-container"><svg id="trend-chart" viewBox="0 0 960 250" role="img" aria-label="Daily uptime and coverage trend"></svg></div>
+      <div class="legend"><span class="key">Observed uptime</span><span class="key coverage">Data coverage</span></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Seven-day reliability leaderboard</h2><span class="muted">Lower uptime ranks first · selected mode</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Rank</th><th>Line</th><th>Observed uptime</th><th>Disruption</th><th>Events</th><th>Coverage</th></tr></thead>
+          <tbody id="leaderboard"><tr><td colspan="6" class="empty">Loading reliability…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Selected line disruptions</h2><span class="muted" id="event-context">Latest observed episodes</span></div>
+      <div class="event-grid" id="events"><div class="empty">Loading disruptions…</div></div>
+    </section>
+    <footer>
+      Unofficial portfolio project.
+      <a href="https://tfl.gov.uk/info-for/open-data-users/" rel="noopener">Data provided by Transport for London</a>.
+      Observed reliability is not an official TfL service-level measure.
+    </footer>
+  </main>
+  <script>
+    const escapeHtml = (value) => String(value ?? "")
+      .replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;").replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+    const fmt = (value) => new Intl.DateTimeFormat("en-GB", {
+      dateStyle: "medium", timeStyle: "short", timeZone: "Europe/London"
+    }).format(new Date(value));
+    const prettyMode = (value) => ({
+      tube: "Tube", "elizabeth-line": "Elizabeth line", dlr: "DLR",
+      overground: "London Overground", tram: "Tram"
+    }[value] || value);
+    const getJson = async (path) => {
+      const response = await fetch(path);
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      return response.json();
+    };
+
+    function renderStatusMix(rows) {
+      const total = rows.reduce((sum, row) => sum + row.observation_count, 0);
+      document.querySelector("#status-total").textContent = `${total.toLocaleString()} observations`;
+      document.querySelector("#status-bar").innerHTML = rows.map((row) =>
+        `<span class="status-segment ${row.is_disrupted ? "disrupted" : "good"}" style="width:${row.observation_pct}%" title="${escapeHtml(row.status_description)}: ${row.observation_pct}%"></span>`
+      ).join("");
+      document.querySelector("#status-list").innerHTML = rows.length ? rows.map((row) => `
+        <div class="status-row"><i class="${row.is_disrupted ? "disrupted" : ""}"></i>
+        <span>${escapeHtml(row.status_description)}</span><strong>${row.observation_pct.toFixed(1)}%</strong>
+        <span class="muted">${row.observation_count.toLocaleString()}</span></div>`).join("") : '<div class="empty">No status observations available.</div>';
+    }
+
+    function renderScatter(rows) {
+      const svg = document.querySelector("#scatter-chart");
+      if (!rows.length) {
+        svg.innerHTML = '<text x="260" y="115" text-anchor="middle" class="chart-label">No line metrics available</text>';
+        return;
+      }
+      const width = 520, height = 230, left = 44, right = 18, top = 16, bottom = 34;
+      const x = (value) => left + value * (width - left - right) / 100;
+      const y = (value) => top + (100 - value) * (height - top - bottom) / 100;
+      const grid = [0, 25, 50, 75, 100].map((value) => `
+        <line x1="${x(value)}" y1="${top}" x2="${x(value)}" y2="${height - bottom}" class="chart-grid" />
+        <line x1="${left}" y1="${y(value)}" x2="${width - right}" y2="${y(value)}" class="chart-grid" />
+        <text x="${x(value)}" y="${height - 10}" text-anchor="middle" class="chart-label">${value}%</text>
+        <text x="${left - 7}" y="${y(value) + 4}" text-anchor="end" class="chart-label">${value}</text>`).join("");
+      const dots = rows.map((row) => `<circle cx="${x(row.coverage_pct)}" cy="${y(row.observed_uptime_pct)}" r="6" class="scatter-dot"><title>${escapeHtml(row.line_name)}: ${row.coverage_pct.toFixed(1)}% coverage, ${row.observed_uptime_pct.toFixed(1)}% uptime</title></circle>`).join("");
+      svg.innerHTML = `${grid}${dots}<text x="${width / 2}" y="${height - 1}" text-anchor="middle" class="chart-label">Coverage</text><text x="12" y="${height / 2}" text-anchor="middle" transform="rotate(-90 12 ${height / 2})" class="chart-label">Observed uptime</text>`;
+    }
+
+    function renderHeatmap(rows) {
+      const values = new Map(rows.map((row) => [`${row.weekday_index}-${row.hour_of_day}`, row]));
+      const days = [[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [6, "Sat"], [0, "Sun"]];
+      const header = '<div></div>' + Array.from({length: 24}, (_, hour) => `<div class="heat-label">${hour % 3 === 0 ? String(hour).padStart(2, "0") : ""}</div>`).join("");
+      const cells = days.map(([dayIndex, dayName]) => `<div class="heat-label">${dayName}</div>` + Array.from({length: 24}, (_, hour) => {
+        const row = values.get(`${dayIndex}-${hour}`);
+        const pct = row?.disruption_pct || 0;
+        const opacity = row ? Math.max(.12, pct / 100) : .04;
+        const detail = row ? `${pct.toFixed(1)}% · ${row.disrupted_observation_count}/${row.observation_count}` : "No observations";
+        return `<div class="heat-cell" style="background:rgba(255,113,128,${opacity})" title="${dayName} ${String(hour).padStart(2, "0")}:00 · ${detail}">${row ? pct.toFixed(0) : ""}</div>`;
+      }).join("")).join("");
+      document.querySelector("#heatmap").innerHTML = header + cells;
+    }
+
+    function renderModeSummary(rows) {
+      document.querySelector("#mode-summary").innerHTML = rows.length ? rows.map((row) => `
+        <tr><td><strong>${escapeHtml(prettyMode(row.mode_name))}</strong></td><td>${row.line_count}</td>
+        <td>${row.observed_uptime_pct.toFixed(1)}%</td><td>${row.average_coverage_pct.toFixed(1)}%</td>
+        <td>${row.disrupted_observations.toLocaleString()}</td><td>${row.disruption_event_count}</td>
+        <td>${row.mean_recovery_minutes == null ? "—" : `${row.mean_recovery_minutes.toFixed(0)} min`}</td></tr>`).join("") : '<tr><td colspan="7" class="empty">No mode data available.</td></tr>';
+    }
+
+    function renderTrend(rows) {
+      const svg = document.querySelector("#trend-chart");
+      if (!rows.length) {
+        svg.innerHTML = '<text x="480" y="125" text-anchor="middle" class="chart-label">No daily history available</text>';
+        return;
+      }
+      const data = [...rows].reverse();
+      const width = 960, height = 250, left = 44, right = 18, top = 15, bottom = 34;
+      const plotWidth = width - left - right, plotHeight = height - top - bottom;
+      const x = (index) => left + (data.length === 1 ? plotWidth / 2 : index * plotWidth / (data.length - 1));
+      const y = (value) => top + (100 - value) * plotHeight / 100;
+      const points = (field) => data.map((row, index) => `${x(index)},${y(row[field])}`).join(" ");
+      const grid = [0, 25, 50, 75, 100].map((value) => `
+        <line x1="${left}" y1="${y(value)}" x2="${width - right}" y2="${y(value)}" class="chart-grid" />
+        <text x="${left - 8}" y="${y(value) + 4}" text-anchor="end" class="chart-label">${value}%</text>`).join("");
+      const labels = data.map((row, index) => index % Math.max(1, Math.ceil(data.length / 6)) === 0 ?
+        `<text x="${x(index)}" y="${height - 8}" text-anchor="middle" class="chart-label">${new Date(`${row.service_date}T12:00:00`).toLocaleDateString("en-GB", {day: "2-digit", month: "short"})}</text>` : "").join("");
+      svg.innerHTML = `${grid}${labels}<polyline points="${points("observed_uptime_pct")}" class="uptime-line"/><polyline points="${points("full_day_coverage_pct")}" class="coverage-line"/>`;
+    }
+
+    async function loadLineDetails() {
+      const lineId = document.querySelector("#line-select").value;
+      const days = document.querySelector("#days-select").value;
+      if (!lineId) return;
+      try {
+        const [daily, events] = await Promise.all([
+          getJson(`/api/v1/lines/${encodeURIComponent(lineId)}/reliability/daily?days=${days}`),
+          getJson(`/api/v1/disruptions?line_id=${encodeURIComponent(lineId)}&limit=8`)
+        ]);
+        renderTrend(daily);
+        document.querySelector("#open-events").textContent = events.filter((event) => !event.is_resolved).length;
+        document.querySelector("#event-context").textContent = `${document.querySelector("#line-select").selectedOptions[0].text} · latest episodes`;
+        document.querySelector("#events").innerHTML = events.length ? events.map((event) => `
+          <article class="event">
+            <div class="event-top"><strong>${escapeHtml(event.line_name)}</strong><span class="status">${escapeHtml(event.worst_status_description)}</span></div>
+            <p>${fmt(event.event_started_at)} · ${event.is_resolved ? `${Math.round(event.event_duration_minutes)} minutes` : "Ongoing or unresolved"}</p>
+            <p>${escapeHtml(event.latest_reason || "No disruption reason supplied by TfL.")}</p>
+          </article>`).join("") : '<div class="empty">No disruption events available.</div>';
+      } catch (error) {
+        document.querySelector("#events").innerHTML = `<div class="error">Unable to load line details: ${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function loadDashboard() {
+      try {
+        const mode = document.querySelector("#mode-select").value;
+        const days = document.querySelector("#network-days").value;
+        const modeParam = mode ? `&mode_name=${encodeURIComponent(mode)}` : "";
+        const [reliability, freshness, modes, statusMix, heatmap] = await Promise.all([
+          getJson(`/api/v1/lines/reliability?min_coverage_pct=0${modeParam}`),
+          getJson("/api/v1/pipeline/freshness"),
+          getJson(`/api/v1/network/reliability-by-mode?days=${days}`),
+          getJson(`/api/v1/network/status-mix?days=${days}${modeParam}`),
+          getJson(`/api/v1/network/disruption-heatmap?days=${days}${modeParam}`)
+        ]);
+        const modeSelector = document.querySelector("#mode-select");
+        const selectedMode = modeSelector.value;
+        modeSelector.innerHTML = '<option value="">All modes</option>' + modes.map((row) =>
+          `<option value="${escapeHtml(row.mode_name)}">${escapeHtml(prettyMode(row.mode_name))}</option>`
+        ).join("");
+        modeSelector.value = selectedMode;
+        renderModeSummary(modes);
+        renderStatusMix(statusMix);
+        renderHeatmap(heatmap);
+        renderScatter(reliability);
+        const stale = freshness.minutes_since_latest_success == null || freshness.minutes_since_latest_success > 15;
+        document.querySelector("#health-dot").classList.toggle("stale", stale);
+        document.querySelector("#freshness").textContent = freshness.latest_success_finished_at
+          ? `Snapshot ${fmt(freshness.latest_success_finished_at)} · ${freshness.minutes_since_latest_success} min ago`
+          : "No successful snapshot yet";
+        const notice = document.querySelector("#quality-notice");
+        if (stale) {
+          notice.textContent = "Pipeline warning: the latest successful snapshot is more than 15 minutes old.";
+          notice.className = "notice show danger";
+        } else if (reliability.length && reliability[0].coverage_quality !== "reliable") {
+          notice.textContent = `Coverage is ${reliability[0].coverage_quality} (${reliability[0].coverage_pct.toFixed(1)}%). Rankings are directional until at least 90% of the seven-day window is observed.`;
+          notice.className = "notice show";
+        } else {
+          notice.className = "notice";
+        }
+
+        if (!reliability.length) {
+          document.querySelector("#leaderboard").innerHTML = '<tr><td colspan="6" class="empty">No reliability data for this mode yet.</td></tr>';
+          document.querySelector("#line-select").innerHTML = "";
+          document.querySelector("#least-line").textContent = "—";
+          document.querySelector("#best-uptime").textContent = "—";
+          document.querySelector("#coverage").textContent = "—";
+          document.querySelector("#open-events").textContent = "—";
+          renderTrend([]);
+          document.querySelector("#events").innerHTML = '<div class="empty">No line selected.</div>';
+          return;
+        }
+        const least = reliability[0];
+        const best = [...reliability].sort((a, b) => b.observed_uptime_pct - a.observed_uptime_pct)[0];
+        document.querySelector("#least-line").textContent = least.line_name;
+        document.querySelector("#best-uptime").textContent = `${best.observed_uptime_pct.toFixed(1)}%`;
+        document.querySelector("#coverage").textContent = `${least.coverage_pct.toFixed(1)}%`;
+        document.querySelector("#leaderboard").innerHTML = reliability.map((line) => `
+          <tr><td class="rank">#${line.reliability_rank}</td><td><strong>${escapeHtml(line.line_name)}</strong></td>
+          <td class="metric"><span class="bar"><i style="width:${line.observed_uptime_pct}%"></i></span>${line.observed_uptime_pct.toFixed(1)}%</td>
+          <td>${line.estimated_disruption_minutes.toLocaleString()} min</td><td>${line.disruption_event_count}</td>
+          <td><span class="badge ${line.coverage_quality}">${line.coverage_pct.toFixed(1)}% · ${line.coverage_quality}</span></td></tr>`).join("");
+        const selector = document.querySelector("#line-select");
+        const previous = selector.value;
+        selector.innerHTML = [...reliability].sort((a, b) => a.line_name.localeCompare(b.line_name))
+          .map((line) => `<option value="${escapeHtml(line.line_id)}">${escapeHtml(line.line_name)}</option>`).join("");
+        selector.value = [...selector.options].some((option) => option.value === previous)
+          ? previous : least.line_id;
+        await loadLineDetails();
+      } catch (error) {
+        document.querySelector("#leaderboard").innerHTML = `<tr><td colspan="6" class="error">Unable to load dashboard: ${escapeHtml(error.message)}</td></tr>`;
+        document.querySelector("#freshness").textContent = "Data unavailable";
+      }
+    }
+    document.querySelector("#line-select").addEventListener("change", loadLineDetails);
+    document.querySelector("#days-select").addEventListener("change", loadLineDetails);
+    document.querySelector("#mode-select").addEventListener("change", loadDashboard);
+    document.querySelector("#network-days").addEventListener("change", loadDashboard);
+    loadDashboard();
+    setInterval(loadDashboard, 60000);
+  </script>
+</body>
+</html>

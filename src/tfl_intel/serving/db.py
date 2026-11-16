@@ -12,7 +12,14 @@ from tfl_intel.serving.config import get_settings
 
 REQUIRED_ANALYTICS_TABLES = (
     "analytics.current_line_status",
+    "analytics.dim_line",
+    "analytics.dim_status_severity",
+    "analytics.disruption_events",
+    "analytics.line_reliability_daily",
+    "analytics.line_reliability_rolling_7d",
     "analytics.line_status_summary",
+    "analytics.network_disruption_hourly",
+    "analytics.network_status_mix_daily",
     "analytics.pipeline_freshness",
 )
 

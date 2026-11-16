@@ -1,5 +1,8 @@
 name: ci
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main]
@@ -8,13 +11,34 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-bookworm
+        env:
+          POSTGRES_DB: tfl_intel
+          POSTGRES_USER: tfl_intel
+          POSTGRES_PASSWORD: ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tfl_intel -d tfl_intel"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
       - uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --all-groups
+
+      - name: Prepare fixture secrets for Compose validation
+        run: |
+          mkdir -p secrets
+          for name in postgres_password airflow_db_password metabase_app_db_password metabase_reader_password; do
+            cp "secrets.example/${name}.txt.example" "secrets/${name}.txt"
+          done
 
       - name: Lint
         run: uv run ruff check .
@@ -27,3 +51,74 @@ jobs:
 
       - name: Unit tests
         run: uv run pytest -m "not integration"
+
+      - name: Initialize integration database
+        env:
+          PGPASSWORD: ci-password
+        run: |
+          for migration in sql/postgres/*.sql; do
+            psql --host localhost --username tfl_intel --dbname tfl_intel \
+              --set ON_ERROR_STOP=1 --file "$migration"
+          done
+
+      - name: Postgres integration tests
+        env:
+          DATABASE_URL: postgresql://tfl_intel:ci-password@localhost:5432/tfl_intel
+          REQUIRE_INTEGRATION_DB: "1"
+        run: uv run pytest -m integration
+
+      - name: Build and test dbt project
+        run: |
+          uv run python scripts/create_dbt_ci_fixture.py /tmp/tfl_intel_ci.duckdb
+          DUCKDB_PATH=/tmp/tfl_intel_ci.duckdb uv run --group analytics \
+            dbt build --project-dir dbt --profiles-dir dbt
+
+      - name: Validate production Compose configuration
+        run: >-
+          docker compose
+          -f docker-compose.yml
+          -f docker-compose.airflow.yml
+          -f docker-compose.metabase.yml
+          -f docker-compose.production.yml
+          config --quiet
+
+      - name: Build deployable images
+        run: >-
+          docker compose
+          -f docker-compose.yml
+          -f docker-compose.airflow.yml
+          build api airflow-webserver
+
+      - name: Verify pinned Metabase image
+        run: >-
+          docker pull
+          metabase/metabase:v0.63.17.x@sha256:5f2ace3426bc4fa9259d6ec68dacae0023c302e8e812ee7f54fce9f6942b6874
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: checks
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: tfl-intel-production
+      cancel-in-progress: false
+    steps:
+      - name: Configure deployment SSH key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+
+      - name: Deploy tested main revision
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '$DEPLOY_PATH' && ./scripts/deploy_production.sh '$GITHUB_SHA'"

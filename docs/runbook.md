@@ -17,6 +17,9 @@ uv sync
 cp .env.example .env
 mkdir -p secrets
 cp secrets.example/postgres_password.txt.example secrets/postgres_password.txt
+cp secrets.example/airflow_db_password.txt.example secrets/airflow_db_password.txt
+cp secrets.example/metabase_app_db_password.txt.example secrets/metabase_app_db_password.txt
+cp secrets.example/metabase_reader_password.txt.example secrets/metabase_reader_password.txt
 
 make postgres-up      # start Postgres (docker compose)
 make postgres-init    # apply sql/postgres/01..04 (idempotent)
@@ -26,30 +29,61 @@ make postgres-init    # apply sql/postgres/01..04 (idempotent)
 
 ```text
 TfL Line API -> ingestion job -> Postgres raw -> DuckDB snapshot -> FastAPI
+                                                   \-> Postgres BI -> Metabase
 ```
 
 ```bash
 # 1. Ingest: fetch current line status, parse, load into Postgres raw.
-#    Safe to re-run: deterministic IDs + ON CONFLICT make re-runs no-ops.
+#    Replaying the same run ID is deduplicated; a new invocation creates a new
+#    run ID and records another observation, even if the status is unchanged.
+make ingest-reference-data
 make ingest-line-status
 
-# 2. Transform: snapshot Postgres raw into DuckDB and rebuild the
-#    analytics marts (current status, summary, freshness).
+# 2. Transform: build a separate DuckDB file, run dbt/tests and invariants,
+#    then atomically promote it; a failed build leaves the previous file live.
 make duckdb-refresh
+make validate-marts
 
 # 3. Serve: read-only JSON API over the DuckDB marts on :8000.
 make api-docker
 
-# 4. Verify.
-make smoke-api                      # or open http://localhost:8000/docs
+# 4. Explore: publish validated marts and start Metabase on :3000.
+make publish-bi
+make metabase-up
+
+# 5. Verify.
+make smoke-api                      # API docs: http://localhost:8000/docs
+# Dashboard: http://localhost:8000/dashboard
+# Metabase: http://localhost:3000
 ```
 
 The API reads a DuckDB *file snapshot*, so new ingestion runs are not visible
-to the API until the next `make duckdb-refresh`.
+to the API until the next successful `make duckdb-refresh`. The tool container
+uses `uv.lock`; an ad hoc newer DuckDB can write a file the API cannot open.
+Reliability responses include
+coverage labels; treat `insufficient` values as directional rather than as
+final service-level measurements.
 
-## Continuous ingestion (interim scheduler)
+## Airflow schedules
 
-Until proper orchestration lands, a shell loop accumulates observations:
+The Compose overlay runs two DAGs:
+
+- `tfl_line_status_pipeline` every five minutes: ingest, snapshot Postgres,
+  run `dbt build`, validate publication invariants, publish the BI schema, then
+  check API readiness.
+- `tfl_reference_data_pipeline` daily at 03:00 UTC: refresh line and severity
+  reference data in Postgres.
+
+```bash
+make airflow-up
+docker compose -f docker-compose.yml -f docker-compose.airflow.yml \
+  exec airflow-scheduler airflow dags list
+```
+
+## Manual continuous-ingestion fallback
+
+If Airflow is deliberately stopped, a shell loop can temporarily accumulate
+observations:
 
 ```bash
 while true; do
@@ -63,7 +97,7 @@ Every run writes a row to `raw.pipeline_runs` (started/success/failed plus
 record counts), so gaps and failures are visible in the data:
 
 ```bash
-docker exec -it tfl_intel_postgres psql -U tfl_intel -d tfl_intel \
+docker compose exec postgres psql -U tfl_intel -d tfl_intel \
   -c "SELECT ingestion_run_id, status, records_inserted, started_at
       FROM raw.pipeline_runs ORDER BY started_at DESC LIMIT 10;"
 ```
@@ -74,7 +108,9 @@ reports `minutes_since_latest_success`.
 ## Tests and checks
 
 ```bash
-make check                     # ruff + mypy + unit tests (what CI runs)
+make check                     # ruff + mypy + Python tests + dbt build/tests
+make dbt-ci                    # deterministic dbt build against a CI fixture
+make dbt-docs                  # generate lineage and catalog artifacts
 uv run pytest -m integration   # loader tests against local Postgres
 ```
 
@@ -98,3 +134,6 @@ lazily imports it to convert TIMESTAMPTZ results; do not remove it from
 The DuckDB file is missing or the analytics tables have not been built yet —
 run `make duckdb-refresh` and check the `missing_tables` field in the
 response.
+
+For the VPS, HTTPS proxy, deployment workflow, backups, and rollback process,
+see [the production deployment guide](../DEPLOYMENT.md).

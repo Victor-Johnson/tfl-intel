@@ -1,0 +1,186 @@
+version: 2
+
+models:
+  - name: dim_line
+    description: Conformed TfL line dimension with observed-data fallback.
+    columns:
+      - name: line_id
+        description: Stable TfL line identifier.
+        data_tests: [unique, not_null]
+      - name: line_name
+        data_tests: [not_null]
+
+  - name: dim_status_severity
+    description: >-
+      Conformed severity dimension. Disruption priority is an analytical
+      ordering and is deliberately separate from TfL's severity number.
+    columns:
+      - name: severity_level
+        data_tests: [unique, not_null]
+      - name: description
+        data_tests: [not_null]
+      - name: disruption_priority
+        data_tests: [not_null]
+
+  - name: current_line_status
+    description: Latest canonical status for every observed rail or tram line.
+    columns:
+      - name: line_id
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_line')
+                field: line_id
+      - name: mode_name
+        data_tests: [not_null]
+      - name: observed_at
+        data_tests: [not_null]
+
+  - name: line_status_summary
+    description: Observation counts by line and status.
+
+  - name: pipeline_freshness
+    description: >-
+      Latest ingestion result and successful-run timestamp included in the
+      snapshot. Consumers calculate age at read time so it keeps advancing.
+    columns:
+      - name: ingestion_run_id
+        data_tests: [unique, not_null]
+
+  - name: fct_disruption_events
+    description: >-
+      One continuous observed disruption episode. A return to Good Service
+      resolves the event; a collection gap over ten minutes breaks continuity.
+    columns:
+      - name: disruption_event_id
+        data_tests: [unique, not_null]
+      - name: line_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_line')
+                field: line_id
+      - name: mode_name
+        data_tests: [not_null]
+      - name: event_started_at
+        data_tests: [not_null]
+      - name: is_resolved
+        data_tests: [not_null]
+
+  - name: mart_line_reliability_daily
+    description: "{{ doc('reliability_semantics') }}"
+    columns:
+      - name: service_date
+        data_tests: [not_null]
+      - name: line_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_line')
+                field: line_id
+      - name: mode_name
+        data_tests: [not_null]
+      - name: coverage_quality
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [insufficient, provisional, reliable]
+
+  - name: mart_line_reliability_rolling_7d
+    description: >-
+      Seven-calendar-day rolling reliability. Consumers must use the coverage
+      percentage and quality label before interpreting rankings.
+    columns:
+      - name: window_end_date
+        data_tests: [not_null]
+      - name: line_id
+        data_tests: [not_null]
+      - name: mode_name
+        data_tests: [not_null]
+      - name: coverage_quality_7d
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [insufficient, provisional, reliable]
+
+  - name: network_status_mix_daily
+    description: Daily observation counts by mode and passenger-visible status.
+    columns:
+      - name: service_date
+        data_tests: [not_null]
+      - name: mode_name
+        data_tests: [not_null]
+      - name: status_description
+        data_tests: [not_null]
+      - name: observation_count
+        data_tests: [not_null]
+
+  - name: network_disruption_hourly
+    description: >-
+      Hour-of-week disruption pattern by mode, retained at daily grain so API
+      consumers can select a time window.
+    columns:
+      - name: service_date
+        data_tests: [not_null]
+      - name: mode_name
+        data_tests: [not_null]
+      - name: weekday_index
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [0, 1, 2, 3, 4, 5, 6]
+      - name: hour_of_day
+        data_tests: [not_null]
+      - name: disruption_pct
+        data_tests: [not_null]
+
+  - name: line_disruption_hourly
+    description: >-
+      Canonical line status samples by local date and hour. This supports
+      historical trip-time comparisons, not a forecast of future service.
+    columns:
+      - name: service_date
+        data_tests: [not_null]
+      - name: line_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_line')
+                field: line_id
+      - name: weekday_index
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [0, 1, 2, 3, 4, 5, 6]
+      - name: hour_of_day
+        data_tests: [not_null]
+      - name: observation_count
+        data_tests: [not_null]
+      - name: observed_disruption_pct
+        data_tests: [not_null]
+
+exposures:
+  - name: reliability_dashboard
+    label: TfL Reliability Serving Surfaces
+    type: dashboard
+    maturity: medium
+    url: https://tfl-intel.victorjohnson.dev/dashboard
+    description: >-
+      FastAPI product dashboard and curated Metabase BI workspace, both backed
+      by the same tested marts.
+    depends_on:
+      - ref('mart_line_reliability_rolling_7d')
+      - ref('mart_line_reliability_daily')
+      - ref('fct_disruption_events')
+      - ref('pipeline_freshness')
+      - ref('network_status_mix_daily')
+      - ref('network_disruption_hourly')
+      - ref('line_disruption_hourly')
+    owner:
+      name: Victor Johnson
+      email: victorjohnsonpro@gmail.com

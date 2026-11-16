@@ -40,6 +40,18 @@ daily_events as (
             as mean_recovery_minutes
     from {{ ref('fct_disruption_events') }}
     group by service_date, line_id
+),
+expected_buckets as (
+    select
+        observations.*,
+        cast(date_diff(
+            'minute',
+            cast(observations.service_date as timestamp)
+                at time zone 'Europe/London',
+            cast(observations.service_date + interval 1 day as timestamp)
+                at time zone 'Europe/London'
+        ) / 5 as integer) as expected_full_day_observations
+    from daily_observations as observations
 )
 select
     observations.service_date,
@@ -63,15 +75,21 @@ select
         / nullif(observations.total_observations, 0),
         2
     ) as observed_uptime_pct,
-    288 as expected_full_day_observations,
+    observations.expected_full_day_observations,
     round(
-        least(100.0, 100.0 * observations.total_observations / 288),
+        least(
+            100.0,
+            100.0 * observations.total_observations
+                / observations.expected_full_day_observations
+        ),
         2
     ) as full_day_coverage_pct,
     case
-        when observations.total_observations / 288.0 < 0.70
+        when observations.total_observations
+            / observations.expected_full_day_observations < 0.70
             then 'insufficient'
-        when observations.total_observations / 288.0 < 0.90
+        when observations.total_observations
+            / observations.expected_full_day_observations < 0.90
             then 'provisional'
         else 'reliable'
     end as coverage_quality,
@@ -81,5 +99,5 @@ select
     round(events.mean_recovery_minutes, 2) as mean_recovery_minutes,
     observations.first_observed_at,
     observations.last_observed_at
-from daily_observations as observations
+from expected_buckets as observations
 left join daily_events as events using (service_date, line_id)

@@ -9,16 +9,17 @@ import duckdb
 
 
 def main() -> None:
-    if len(sys.argv) != 3:
-        msg = "Usage: run_duckdb_sql.py <duckdb_path> <sql_path>"
+    if len(sys.argv) < 3:
+        msg = "Usage: run_duckdb_sql.py <duckdb_path> <sql_path> [<sql_path> ...]"
         raise SystemExit(msg)
 
     duckdb_path = sys.argv[1]
-    sql_path = Path(sys.argv[2])
-    sql = sql_path.read_text(encoding="utf-8")
+    sql_paths = [Path(value) for value in sys.argv[2:]]
 
     with duckdb.connect(duckdb_path) as conn:
-        conn.execute(sql)
+        for sql_path in sql_paths:
+            sql = sql_path.read_text(encoding="utf-8")
+            conn.execute(sql)
 
 
 if __name__ == "__main__":

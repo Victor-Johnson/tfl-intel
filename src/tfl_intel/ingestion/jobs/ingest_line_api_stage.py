@@ -17,14 +17,16 @@ def main() -> None:
     logger = get_logger(__name__, source="tfl_line_api_stage")
 
     severity_count = run_severity_codes()
-    lines_count = run_lines_by_mode("tube")
-    status_count = run_line_status()
+    modes = settings.configured_tfl_modes()
+    lines_count = sum(run_lines_by_mode(mode) for mode in modes)
+    status_count = sum(run_line_status(mode) for mode in modes)
 
     logger.info(
         "line_api_stage_loaded_to_postgres",
         severity_records=severity_count,
         line_records=lines_count,
         status_records=status_count,
+        modes=modes,
     )
 
 

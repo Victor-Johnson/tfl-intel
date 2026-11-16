@@ -18,9 +18,11 @@ from tfl_intel.ingestion.loaders.postgres_loader import (
 
 
 def main() -> None:
-    """Fetch TfL tube line metadata and upsert it into Postgres."""
+    """Fetch configured TfL line metadata and upsert it into Postgres."""
 
-    run()
+    settings = load_settings()
+    for mode in settings.configured_tfl_modes():
+        run(mode)
 
 
 def run(mode: str = "tube") -> int:

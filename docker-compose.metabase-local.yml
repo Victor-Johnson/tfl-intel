@@ -1,0 +1,11 @@
+services:
+  metabase:
+    environment:
+      MB_SITE_URL: http://127.0.0.1:3001
+      MB_LOAD_SAMPLE_CONTENT: "false"
+
+secrets:
+  metabase_app_db_password:
+    file: ./secrets/metabase_local_app_db_password.txt
+  metabase_reader_password:
+    file: ./secrets/metabase_local_reader_password.txt

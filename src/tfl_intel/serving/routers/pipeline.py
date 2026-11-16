@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/v1/pipeline", tags=["pipeline"])
 
 
 @router.get("/latest-run", response_model=PipelineLatestRunResponse)
-def latest_run() -> dict:
+async def latest_run() -> dict:
     """Return the latest pipeline run captured in the DuckDB snapshot."""
 
     row = fetch_one(
@@ -33,7 +33,7 @@ def latest_run() -> dict:
 
 
 @router.get("/freshness", response_model=PipelineFreshnessResponse)
-def freshness() -> dict:
+async def freshness() -> dict:
     """Return latest run status and successful-run freshness."""
 
     row = fetch_one(
@@ -46,7 +46,9 @@ def freshness() -> dict:
             records_received,
             records_inserted,
             latest_success_finished_at,
-            minutes_since_latest_success
+            date_diff(
+                'minute', latest_success_finished_at, current_timestamp
+            ) AS minutes_since_latest_success
         FROM analytics.pipeline_freshness
         """
     )

@@ -50,8 +50,10 @@ Before public sharing, log in as a viewer, check a selected line against TfL,
 confirm the seven cards and line filter, and verify no `raw` table is visible.
 Only then consider publishing this dashboard in Metabase Admin settings.
 Metabase public links are accessible without login; keep administration
-authenticated. The custom dashboard link should point directly to the vetted
-public dashboard URL, not the Metabase root.
+authenticated. After reviewing the dashboard, set `BI_DASHBOARD_URL` in `.env`
+to its exact vetted HTTPS dashboard URL (not the Metabase root), keep
+`BI_DASHBOARD_DEMO=false`, and recreate the API container. Until then, the
+custom dashboard does not show a BI link.
 
 ## Local verified demo
 
@@ -63,6 +65,11 @@ app and reader passwords are also ignored; the existing secret files were
 not changed. Seven card queries and the Bakerloo line filter passed through
 the Metabase API. The local Compose override is
 `docker-compose.metabase-local.yml`.
+To link the local API dashboard to this demo, set
+`BI_DASHBOARD_URL=http://127.0.0.1:3001/dashboard/1` and
+`BI_DASHBOARD_DEMO=true` in the ignored `.env`, then recreate the API
+container. The link says **fixture data** so it cannot be mistaken for the
+API's live TfL history.
 
 ## Data lifecycle
 

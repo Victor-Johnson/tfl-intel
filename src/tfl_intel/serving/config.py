@@ -11,6 +11,8 @@ class ServingSettings(BaseSettings):
 
     duckdb_path: str = Field(default="/data/tfl_intel.duckdb", alias="DUCKDB_PATH")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    bi_dashboard_url: str = Field(default="", alias="BI_DASHBOARD_URL")
+    bi_dashboard_demo: bool = Field(default=False, alias="BI_DASHBOARD_DEMO")
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -62,6 +62,8 @@ services:
     environment:
       DUCKDB_PATH: /data/tfl_intel.duckdb
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      BI_DASHBOARD_URL: ${BI_DASHBOARD_URL:-}
+      BI_DASHBOARD_DEMO: ${BI_DASHBOARD_DEMO:-false}
     ports:
       - "${API_BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8000}:8000"
     volumes:

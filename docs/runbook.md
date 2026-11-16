@@ -5,7 +5,7 @@ operate and troubleshoot it day to day.
 
 ## Prerequisites
 
-- Docker + Docker Compose
+- Docker + Docker Compose and Buildx
 - [uv](https://docs.astral.sh/uv/)
 - No TfL API key is required for the public Line/Status endpoints
   (`TFL_APP_KEY` in `.env` raises rate limits if you have one).
@@ -13,17 +13,26 @@ operate and troubleshoot it day to day.
 ## First-time setup
 
 ```bash
-uv sync
+uv sync --all-groups
 cp .env.example .env
 mkdir -p secrets
-cp secrets.example/postgres_password.txt.example secrets/postgres_password.txt
-cp secrets.example/airflow_db_password.txt.example secrets/airflow_db_password.txt
-cp secrets.example/metabase_app_db_password.txt.example secrets/metabase_app_db_password.txt
-cp secrets.example/metabase_reader_password.txt.example secrets/metabase_reader_password.txt
+for name in \
+  postgres_password airflow_db_password \
+  metabase_app_db_password metabase_reader_password; do
+  openssl rand -hex 32 > "secrets/$name.txt"
+done
+
+# Edit .env: set AIRFLOW_UID to the numeric output of `id -u`, and replace
+# AIRFLOW_ADMIN_PASSWORD before starting the Airflow webserver.
+chmod 600 .env secrets/*.txt
 
 make postgres-up      # start Postgres (docker compose)
 make postgres-init    # apply sql/postgres/01..04 (idempotent)
 ```
+
+These commands are for a new volume. Do not change only the password file for
+an existing Postgres volume: its database role keeps the old password. Back up
+and verify a restore before a deliberate role/password rotation.
 
 ## The pipeline, end to end
 
@@ -69,8 +78,8 @@ final service-level measurements.
 The Compose overlay runs two DAGs:
 
 - `tfl_line_status_pipeline` every five minutes: ingest, snapshot Postgres,
-  run `dbt build`, validate publication invariants, publish the BI schema, then
-  check API readiness.
+  run `dbt build`, validate publication invariants, check API readiness, then
+  publish the BI schema when enabled.
 - `tfl_reference_data_pipeline` daily at 03:00 UTC: refresh line and severity
   reference data in Postgres.
 

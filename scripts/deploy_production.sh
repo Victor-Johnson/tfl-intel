@@ -21,6 +21,12 @@ if PROJECT_DIR="$PROJECT_DIR" ./scripts/bootstrap_production.sh; then
   exit 0
 fi
 
+if ! git cat-file -e "$previous_revision:scripts/bootstrap_production.sh" 2>/dev/null; then
+  echo "Initial deployment failed; no previous bootstrappable revision exists." >&2
+  echo "Leaving $deployed_revision checked out for diagnosis." >&2
+  exit 1
+fi
+
 echo "Deployment failed; restoring $previous_revision." >&2
 git reset --hard "$previous_revision"
 PROJECT_DIR="$PROJECT_DIR" ./scripts/bootstrap_production.sh

@@ -61,6 +61,7 @@ services:
       context: .
       dockerfile: docker/api/Dockerfile
     image: tfl-intel-api:local
+    user: "${AIRFLOW_UID:-50000}:0"
     profiles: [tools]
     restart: "no"
     networks:

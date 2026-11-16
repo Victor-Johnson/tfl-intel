@@ -147,10 +147,14 @@ if desired. Add these secrets:
 
 A push to `main` deploys only after lint, formatting, typing, Python unit and
 integration tests, dbt tests, Compose validation, and container builds pass.
-The workflow passes the exact tested commit SHA, so a later push cannot be
-deployed by an earlier workflow run. The server refuses to deploy over a dirty
-checkout. If bootstrap fails, the deployment script restores the previous Git
-revision and rebuilds that version against the unchanged persistent volumes.
+The workflow sends the tested deployment script over SSH, so the first server
+checkout can still be on the older `main` commit. It passes the exact tested
+commit SHA, so a later push cannot be deployed by an earlier workflow run.
+The server refuses to deploy over a dirty checkout. If bootstrap fails, the
+deployment script restores the previous Git revision and rebuilds that version
+against the unchanged persistent volumes. For a first deployment with no
+previous bootstrap, investigate the failed release instead of expecting a
+working application rollback.
 
 ## 5. Backups
 
